@@ -25,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const origin = `${protocol}://${host}`;
   const title = "Madhya Pradesh Road Watch";
   const description =
-    "Track proposed, approved and under-construction highways across Madhya Pradesh with district filters, map anchors and official government sources.";
+    "Explore active road projects and the official national, state, district and village-road inventory for every Madhya Pradesh district.";
 
   return {
     metadataBase: new URL(origin),

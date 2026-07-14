@@ -1,330 +1,410 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 import type { LayerGroup, Map as LeafletMap } from "leaflet";
+import { majorProjects, type ProjectStage } from "./major-projects";
 
-type Stage = "Approved" | "Under implementation" | "Bids / appraisal" | "DPR / proposed";
+type DistrictSummary = {
+  code: number;
+  name: string;
+  center: [number, number];
+  inventoryCount: number;
+  activeProjectCount: number;
+  stageCounts: Record<string, number>;
+  categoryCounts: Record<string, number>;
+};
 
-type RoadProject = {
+type InventoryRoad = {
+  id: string;
+  name: string;
+  code: string;
+  category: string;
+  owner: string;
+  blockCode: number;
+  bounds: [number, number, number, number];
+};
+
+type RuralProject = {
+  id: string;
+  name: string;
+  code: string;
+  category: string;
+  stage: "In progress" | "Pending / not started";
+  block: string;
+  scheme: string;
+  batch: string;
+  year: string;
+  package: string;
+  workType: string;
+  length: number | null;
+  completedLength: number | null;
+  progress: number | null;
+  sanctionDate: string;
+  agreementDate: string;
+  contractor: string;
+  company: string;
+  locationPrecision: string;
+  bounds: [number, number, number, number] | null;
+  route: [number, number][] | null;
+  sourceUrl: string;
+};
+
+type DistrictDataset = {
+  district: { code: number; name: string; center: [number, number] };
+  inventory: InventoryRoad[];
+  ruralProjects: RuralProject[];
+};
+
+type DisplayProject = {
   id: string;
   name: string;
   road: string;
-  stage: Stage;
-  districts: string[];
-  length: string;
-  investment: string;
+  category: string;
+  stage: ProjectStage;
+  area: string;
+  detailOneLabel: string;
+  detailOne: string;
+  detailTwoLabel: string;
+  detailTwo: string;
   statusNote: string;
   sourceName: string;
   sourceDate: string;
   sourceUrl: string;
-  route: [number, number][];
+  locationPrecision: string;
+  route: [number, number][] | null;
+  bounds: [number, number, number, number] | null;
 };
 
-const stageColors: Record<Stage, string> = {
-  Approved: "#de6f3a",
-  "Under implementation": "#297864",
-  "Bids / appraisal": "#c4922f",
-  "DPR / proposed": "#6f7b8b",
+type MapFeature = {
+  id: string;
+  name: string;
+  stage?: ProjectStage;
+  route: [number, number][] | null;
+  bounds: [number, number, number, number] | null;
+  locationPrecision: string;
 };
 
-const projects: RoadProject[] = [
-  {
-    id: "betul-khandwa-vadodara",
-    name: "Hiwarkhedi–Roshni–Ashapur–Rudhy & Deshgaon–Julwaniya",
-    road: "NH-347B · Betul–Khandwa–Vadodara corridor",
-    stage: "Approved",
-    districts: ["Betul", "Khandwa", "Khargone", "Barwani"],
-    length: "233.65 km",
-    investment: "₹4,415.60 cr",
-    statusNote: "Cabinet approval on HAM; includes a 16.2 km greenfield Khargone bypass.",
-    sourceName: "PIB · Cabinet Committee on Economic Affairs",
-    sourceDate: "03 Jun 2026",
-    sourceUrl: "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2268359&lang=1&reg=3",
-    route: [[21.9, 77.9], [22.18, 76.93], [21.83, 76.35], [21.83, 75.62], [21.86, 75.1]],
-  },
-  {
-    id: "badnawar-timarwani",
-    name: "Badnawar–Petlawad–Thandla–Timarwani",
-    road: "NH-752D · Delhi–Mumbai Expressway connector",
-    stage: "Approved",
-    districts: ["Dhar", "Jhabua"],
-    length: "80.45 km",
-    investment: "₹3,839.42 cr",
-    statusNote: "Cabinet-approved four-lane greenfield and brownfield corridor on HAM.",
-    sourceName: "PIB · Cabinet Committee on Economic Affairs",
-    sourceDate: "10 Mar 2026",
-    sourceUrl: "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2237568&lang=1&reg=3",
-    route: [[23.02, 75.23], [23.0, 74.8], [23.0, 74.58], [22.84, 74.43]],
-  },
-  {
-    id: "boregaon-shahpur",
-    name: "Boregaon Buzurg–Shahpur",
-    road: "NH-753L · MP–Maharashtra economic corridor",
-    stage: "Under implementation",
-    districts: ["Khandwa", "Burhanpur"],
-    length: "~47 km",
-    investment: "₹944 cr",
-    statusNote: "MoRTH reported approximately 85% construction complete in May 2026.",
-    sourceName: "PIB · Ministry of Road Transport & Highways",
-    sourceDate: "30 May 2026",
-    sourceUrl: "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2266946&lang=2&reg=48",
-    route: [[21.82, 76.45], [21.57, 76.32], [21.31, 76.23]],
-  },
-  {
-    id: "agra-gwalior",
-    name: "Agra–Gwalior Greenfield Expressway",
-    road: "NH-719D · Six-lane access-controlled corridor",
-    stage: "Under implementation",
-    districts: ["Morena", "Gwalior"],
-    length: "88 km",
-    investment: "₹4,613 cr",
-    statusNote: "Concession agreement signed by NHAI for BOT (Toll) implementation.",
-    sourceName: "PIB · National Highways Authority of India",
-    sourceDate: "30 Apr 2025",
-    sourceUrl: "https://www.pib.gov.in/PressReleaseIframePage.aspx?PRID=2125590&lang=2&reg=48",
-    route: [[27.08, 78.0], [26.49, 77.99], [26.24, 78.12]],
-  },
-  {
-    id: "indore-eastern-bypass",
-    name: "Indore Eastern Bypass",
-    road: "Six-lane bypass · km 64–116",
-    stage: "Bids / appraisal",
-    districts: ["Indore"],
-    length: "62 km",
-    investment: "₹2,971 cr",
-    statusNote: "Two HAM packages had bids invited; proposals were submitted for CCEA appraisal.",
-    sourceName: "NHAI · Bids & clearance dashboard",
-    sourceDate: "14 Nov 2025",
-    sourceUrl: "https://nhai.gov.in/nhai/sites/default/files/mix_file/Status_of_Projects_where_Bids.pdf",
-    route: [[22.62, 75.95], [22.71, 76.02], [22.83, 75.95]],
-  },
-  {
-    id: "ujjain-jhalawar",
-    name: "Ujjain–Jhalawar Package 1",
-    road: "NH-552G · Four-lane HAM package",
-    stage: "Bids / appraisal",
-    districts: ["Ujjain", "Agar Malwa"],
-    length: "44 km",
-    investment: "₹1,345 cr",
-    statusNote: "Bid-stage project with proposal submitted for CCEA appraisal.",
-    sourceName: "NHAI · Bids & clearance dashboard",
-    sourceDate: "14 Nov 2025",
-    sourceUrl: "https://nhai.gov.in/nhai/sites/default/files/mix_file/Status_of_Projects_where_Bids.pdf",
-    route: [[23.18, 75.78], [23.71, 76.01], [23.95, 76.09], [24.27, 76.15]],
-  },
-  {
-    id: "rewa-sidhi",
-    name: "Rewa–Churhat–Sidhi widening",
-    road: "NH-39 · Four-lane paved-shoulder packages",
-    stage: "DPR / proposed",
-    districts: ["Rewa", "Sidhi"],
-    length: "59.1 km",
-    investment: "HAM packages",
-    statusNote: "Rewa–Churhat and Churhat–Sidhi sections listed in NHAI's balance-for-award register.",
-    sourceName: "NHAI · Balance for Award",
-    sourceDate: "01 Apr 2025",
-    sourceUrl: "https://nhai.gov.in/nhai/sites/default/files/mix_file/Balance_for_award_04-25.pdf",
-    route: [[24.54, 81.3], [24.43, 81.66], [24.39, 81.88]],
-  },
-  {
-    id: "damoh-jabalpur",
-    name: "Damoh–Jabalpur widening",
-    road: "NH-34 · Two/four-lane paved-shoulder corridor",
-    stage: "DPR / proposed",
-    districts: ["Damoh", "Jabalpur"],
-    length: "~100 km",
-    investment: "EPC packages",
-    statusNote: "DPR and first 43.5 km construction package listed for award by NHAI.",
-    sourceName: "NHAI · Balance for Award",
-    sourceDate: "01 Apr 2025",
-    sourceUrl: "https://nhai.gov.in/nhai/sites/default/files/mix_file/Balance_for_award_04-25.pdf",
-    route: [[23.84, 79.44], [23.58, 79.75], [23.18, 79.99]],
-  },
-  {
-    id: "indore-western-bypass",
-    name: "Indore Western Bypass · Package 1",
-    road: "Six-lane greenfield bypass",
-    stage: "Approved",
-    districts: ["Indore"],
-    length: "34 km",
-    investment: "₹1,534.70 cr",
-    statusNote: "Package 1 approved on Hybrid Annuity Mode by MoRTH.",
-    sourceName: "PIB · Ministry of Road Transport & Highways",
-    sourceDate: "29 Feb 2024",
-    sourceUrl: "https://www.pib.gov.in/Pressreleaseshare.aspx?PRID=2010054&lang=2&reg=48",
-    route: [[22.63, 75.77], [22.72, 75.68], [22.86, 75.73]],
-  },
-  {
-    id: "bhopal-ayodhya-bypass",
-    name: "Bhopal Ayodhya Bypass service roads",
-    road: "NH-46 to NH-146 · Six-lane urban corridor",
-    stage: "Approved",
-    districts: ["Bhopal"],
-    length: "Urban section",
-    investment: "₹1,238.59 cr",
-    statusNote: "Six-lane service roads approved from Asharam Tiraha to Ratnagiri Tiraha.",
-    sourceName: "PIB · Ministry of Road Transport & Highways",
-    sourceDate: "29 Feb 2024",
-    sourceUrl: "https://www.pib.gov.in/Pressreleaseshare.aspx?PRID=2010054&lang=2&reg=48",
-    route: [[23.25, 77.49], [23.28, 77.5], [23.31, 77.48]],
-  },
-  {
-    id: "shahganj-badi",
-    name: "Shahganj Bypass–Badi",
-    road: "NH-146B · Four-lane Package IV",
-    stage: "Approved",
-    districts: ["Sehore", "Raisen"],
-    length: "41 km",
-    investment: "₹776.19 cr",
-    statusNote: "Four-laning approved on Hybrid Annuity Mode.",
-    sourceName: "PIB · Ministry of Road Transport & Highways",
-    sourceDate: "29 Feb 2024",
-    sourceUrl: "https://www.pib.gov.in/Pressreleaseshare.aspx?PRID=2010054&lang=2&reg=48",
-    route: [[22.84, 77.8], [22.98, 77.99], [23.1, 78.22]],
-  },
-  {
-    id: "chambal-expressway",
-    name: "Greenfield Chambal Expressway",
-    road: "Interstate four-lane greenfield corridor",
-    stage: "DPR / proposed",
-    districts: ["Sheopur", "Morena", "Bhind"],
-    length: "404 km total",
-    investment: "DPR stage",
-    statusNote: "Consolidated DPR consultancy listed across Madhya Pradesh, Uttar Pradesh and Rajasthan.",
-    sourceName: "NHAI · Balance for Award",
-    sourceDate: "01 Apr 2025",
-    sourceUrl: "https://nhai.gov.in/nhai/sites/default/files/mix_file/Balance_for_award_04-25.pdf",
-    route: [[25.66, 76.7], [26.06, 77.14], [26.49, 77.99], [26.57, 78.78]],
-  },
+const DEFAULT_DISTRICT = 76;
+const PAGE_SIZE = 100;
+const projectStages: (ProjectStage | "All stages")[] = [
+  "All stages",
+  "In progress",
+  "Pending / not started",
+  "Approved",
+  "Bids / appraisal",
+  "DPR / proposed",
 ];
+const inventoryTypes = [
+  "All road types",
+  "National highway",
+  "State highway",
+  "Major district road",
+  "Other district road",
+  "Village road",
+  "Rural track",
+  "Other road",
+];
+const projectTypes = [
+  "All road types",
+  "National highway",
+  "State highway",
+  "Expressway / bypass",
+  "Village / rural project",
+];
+const stageColors: Record<ProjectStage, string> = {
+  "In progress": "#297864",
+  "Pending / not started": "#d77a37",
+  Approved: "#2875a6",
+  "Bids / appraisal": "#b28a2f",
+  "DPR / proposed": "#687685",
+};
 
-const districts = Array.from(new Set(projects.flatMap((project) => project.districts))).sort();
-const stages: Stage[] = ["Approved", "Under implementation", "Bids / appraisal", "DPR / proposed"];
+const districtDisplayNames: Record<string, string> = {
+  Agar: "Agar Malwa (Agar in source)",
+  Hoshangabad: "Narmadapuram (Hoshangabad in source)",
+  Mandsour: "Mandsaur (Mandsour in source)",
+};
 
-function CorridorMap({
-  visibleProjects,
-  selectedProject,
+function districtLabel(name: string) {
+  return districtDisplayNames[name] ?? name;
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("en-IN").format(value);
+}
+
+function formatLength(value: number | null) {
+  if (value === null) return "Not stated";
+  if (value === 0) return "Bridge work";
+  return `${value.toLocaleString("en-IN", { maximumFractionDigits: 2 })} km`;
+}
+
+function ruralProjectToDisplay(project: RuralProject): DisplayProject {
+  const progress = project.progress === null ? "Not reported" : `${project.progress}%`;
+  return {
+    id: project.id,
+    name: project.name,
+    road: `${project.scheme}${project.package ? ` · ${project.package}` : ""}`,
+    category: project.category,
+    stage: project.stage,
+    area: `${project.block} block`,
+    detailOneLabel: "Length / work",
+    detailOne: project.workType === "Bridge" ? `Bridge · ${formatLength(project.length)}` : formatLength(project.length),
+    detailTwoLabel: "Reported progress",
+    detailTwo: progress,
+    statusNote: `${project.workType} record sanctioned${project.sanctionDate ? ` on ${project.sanctionDate}` : ""}. ${project.locationPrecision}.`,
+    sourceName: "PMGSY · OMMAS Sanction Award Progress",
+    sourceDate: project.year || "Live report",
+    sourceUrl: project.sourceUrl,
+    locationPrecision: project.locationPrecision,
+    route: project.route,
+    bounds: project.bounds,
+  };
+}
+
+function districtMajorProjects(districtName: string): DisplayProject[] {
+  return majorProjects
+    .filter((project) => project.districts.includes(districtName))
+    .map((project) => ({
+      id: project.id,
+      name: project.name,
+      road: project.road,
+      category: project.category,
+      stage: project.stage,
+      area: project.districts.join(" · "),
+      detailOneLabel: "Length",
+      detailOne: project.length,
+      detailTwoLabel: "Investment / mode",
+      detailTwo: project.investment,
+      statusNote: project.statusNote,
+      sourceName: project.sourceName,
+      sourceDate: project.sourceDate,
+      sourceUrl: project.sourceUrl,
+      locationPrecision: "Indicative corridor anchors",
+      route: project.route,
+      bounds: null,
+    }));
+}
+
+function RoadMap({
+  features,
+  selectedFeature,
+  districtCenter,
+  mode,
   onSelect,
 }: {
-  visibleProjects: RoadProject[];
-  selectedProject: RoadProject | undefined;
+  features: MapFeature[];
+  selectedFeature: MapFeature | undefined;
+  districtCenter: [number, number];
+  mode: "projects" | "inventory";
   onSelect: (id: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
-  const routeLayerRef = useRef<LayerGroup | null>(null);
+  const layerRef = useRef<LayerGroup | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-
     import("leaflet").then((L) => {
       if (cancelled || !containerRef.current || mapRef.current) return;
-
       const map = L.map(containerRef.current, {
-        center: [23.55, 78.2],
-        zoom: 6,
+        center: districtCenter,
+        zoom: 9,
         zoomControl: false,
         attributionControl: true,
       });
-
       L.control.zoom({ position: "bottomright" }).addTo(map);
       L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
         attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
         maxZoom: 19,
       }).addTo(map);
-
       mapRef.current = map;
       window.setTimeout(() => map.invalidateSize(), 0);
     });
-
     return () => {
       cancelled = true;
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [districtCenter]);
 
   useEffect(() => {
     let cancelled = false;
-
     import("leaflet").then((L) => {
       const map = mapRef.current;
       if (!map || cancelled) return;
+      layerRef.current?.remove();
+      const layer = L.layerGroup().addTo(map);
+      layerRef.current = layer;
 
-      routeLayerRef.current?.remove();
-      const routeLayer = L.layerGroup().addTo(map);
-      routeLayerRef.current = routeLayer;
-
-      visibleProjects.forEach((project) => {
-        const isSelected = selectedProject?.id === project.id;
-        const line = L.polyline(project.route, {
-          color: stageColors[project.stage],
-          weight: isSelected ? 7 : 4,
-          opacity: selectedProject && !isSelected ? 0.28 : 0.82,
-          lineCap: "round",
-        }).addTo(routeLayer);
-
-        line.bindTooltip(project.name, { sticky: true, direction: "top" });
-        line.on("click", () => onSelect(project.id));
-
-        if (isSelected) {
-          project.route.forEach((point, index) => {
-            L.circleMarker(point, {
-              radius: index === 0 || index === project.route.length - 1 ? 6 : 3,
-              color: "#fffdf7",
-              weight: 2,
-              fillColor: stageColors[project.stage],
-              fillOpacity: 1,
-            }).addTo(routeLayer);
-          });
-        }
-      });
-
-      if (selectedProject) {
-        map.fitBounds(L.latLngBounds(selectedProject.route), { padding: [54, 54], maxZoom: 10 });
-      } else if (visibleProjects.length > 0) {
-        map.fitBounds(L.latLngBounds(visibleProjects.flatMap((project) => project.route)), {
-          padding: [40, 40],
-          maxZoom: 7,
+      if (mode === "projects") {
+        features.forEach((feature) => {
+          if (!feature.route || !feature.stage) return;
+          const selected = selectedFeature?.id === feature.id;
+          const line = L.polyline(feature.route, {
+            color: stageColors[feature.stage],
+            weight: selected ? 7 : 4,
+            opacity: selectedFeature && !selected ? 0.27 : 0.82,
+            lineCap: "round",
+          }).addTo(layer);
+          line.bindTooltip(feature.name, { sticky: true, direction: "top" });
+          line.on("click", () => onSelect(feature.id));
         });
       }
-    });
 
+      if (selectedFeature?.route) {
+        selectedFeature.route.forEach((point, index) => {
+          if (index !== 0 && index !== selectedFeature.route!.length - 1) return;
+          L.circleMarker(point, {
+            radius: 6,
+            color: "#fffdf7",
+            weight: 2,
+            fillColor: selectedFeature.stage ? stageColors[selectedFeature.stage] : "#214f42",
+            fillOpacity: 1,
+          }).addTo(layer);
+        });
+        map.fitBounds(L.latLngBounds(selectedFeature.route), { padding: [62, 62], maxZoom: 13 });
+      } else if (selectedFeature?.bounds) {
+        const bounds = L.latLngBounds(
+          [selectedFeature.bounds[0], selectedFeature.bounds[1]],
+          [selectedFeature.bounds[2], selectedFeature.bounds[3]],
+        );
+        L.rectangle(bounds, {
+          color: "#d96f38",
+          weight: 4,
+          fillColor: "#d96f38",
+          fillOpacity: 0.12,
+        }).addTo(layer).bindTooltip(selectedFeature.name);
+        map.fitBounds(bounds, { padding: [72, 72], maxZoom: 14 });
+      } else if (selectedFeature) {
+        L.circleMarker(districtCenter, {
+          radius: 10,
+          color: "#fffdf7",
+          weight: 3,
+          fillColor: selectedFeature.stage ? stageColors[selectedFeature.stage] : "#214f42",
+          fillOpacity: 0.92,
+        }).addTo(layer).bindTooltip(`${selectedFeature.name} · district/block anchor`);
+        map.setView(districtCenter, 10);
+      } else {
+        const routed = features.filter((feature) => feature.route).flatMap((feature) => feature.route!);
+        if (routed.length) {
+          map.fitBounds(L.latLngBounds(routed), { padding: [50, 50], maxZoom: 10 });
+        } else {
+          map.setView(districtCenter, 9);
+        }
+      }
+    });
     return () => {
       cancelled = true;
     };
-  }, [visibleProjects, selectedProject, onSelect]);
+  }, [districtCenter, features, mode, onSelect, selectedFeature]);
 
-  return <div ref={containerRef} className="map-canvas" aria-label="Map of selected road corridors" />;
+  return <div ref={containerRef} className="map-canvas" aria-label="Map of roads and projects in the selected district" />;
 }
 
 export function RoadWatch() {
-  const [district, setDistrict] = useState("All districts");
-  const [stage, setStage] = useState<Stage | "All stages">("All stages");
-  const [selectedId, setSelectedId] = useState(projects[0].id);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [districts, setDistricts] = useState<DistrictSummary[]>([]);
+  const [districtCode, setDistrictCode] = useState(DEFAULT_DISTRICT);
+  const [dataset, setDataset] = useState<DistrictDataset | null>(null);
+  const [mode, setMode] = useState<"projects" | "inventory">("projects");
+  const [stage, setStage] = useState<ProjectStage | "All stages">("All stages");
+  const [roadType, setRoadType] = useState("All road types");
+  const [search, setSearch] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
+  const deferredSearch = useDeferredValue(search.trim().toLowerCase());
 
-  const visibleProjects = projects.filter((project) => {
-    const districtMatches = district === "All districts" || project.districts.includes(district);
-    const stageMatches = stage === "All stages" || project.stage === stage;
-    return districtMatches && stageMatches;
+  useEffect(() => {
+    fetch("/data/roads/districts.json")
+      .then((response) => {
+        if (!response.ok) throw new Error("District index unavailable");
+        return response.json() as Promise<DistrictSummary[]>;
+      })
+      .then(setDistricts)
+      .catch(() => setDistricts([]));
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(`/data/roads/${districtCode}.json`, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("District data unavailable");
+        return response.json() as Promise<DistrictDataset>;
+      })
+      .then((data) => {
+        setDataset(data);
+        setSelectedId(null);
+        setVisibleLimit(PAGE_SIZE);
+      })
+      .catch((error: Error) => {
+        if (error.name !== "AbortError") setDataset(null);
+      });
+    return () => controller.abort();
+  }, [districtCode]);
+
+  const districtSummary = districts.find((item) => item.code === districtCode);
+  const currentDataset = dataset?.district.code === districtCode ? dataset : null;
+  const districtName = currentDataset?.district.name ?? districtSummary?.name ?? "Bhopal";
+  const displayDistrictName = districtLabel(districtName);
+  const allProjects = currentDataset
+    ? [...currentDataset.ruralProjects.map(ruralProjectToDisplay), ...districtMajorProjects(districtName)]
+    : [];
+  const filteredProjects = allProjects.filter((project) => {
+    const stageMatch = stage === "All stages" || project.stage === stage;
+    const typeMatch = roadType === "All road types" || project.category === roadType;
+    const haystack = `${project.name} ${project.road} ${project.area} ${project.stage}`.toLowerCase();
+    return stageMatch && typeMatch && (!deferredSearch || haystack.includes(deferredSearch));
   });
+  const filteredInventory = (currentDataset?.inventory ?? []).filter((road) => {
+    const typeMatch = roadType === "All road types" || road.category === roadType;
+    const haystack = `${road.name} ${road.code} ${road.category} ${road.owner}`.toLowerCase();
+    return typeMatch && (!deferredSearch || haystack.includes(deferredSearch));
+  });
+  const visibleInventory = filteredInventory.slice(0, visibleLimit);
+  const selectedProject = filteredProjects.find((project) => project.id === selectedId) ?? filteredProjects[0];
+  const selectedRoad = filteredInventory.find((road) => road.id === selectedId) ?? filteredInventory[0];
+  const projectFeatures: MapFeature[] = filteredProjects.map((project) => ({
+    id: project.id,
+    name: project.name,
+    stage: project.stage,
+    route: project.route,
+    bounds: project.bounds,
+    locationPrecision: project.locationPrecision,
+  }));
+  const selectedFeature = mode === "projects"
+    ? selectedProject
+      ? projectFeatures.find((feature) => feature.id === selectedProject.id)
+      : undefined
+    : selectedRoad
+      ? {
+          id: selectedRoad.id,
+          name: selectedRoad.name,
+          route: null,
+          bounds: selectedRoad.bounds,
+          locationPrecision: "Official GIS road bounds",
+        }
+      : undefined;
+  const activeSelectedId = mode === "projects" ? selectedProject?.id : selectedRoad?.id;
+  const districtCenter = currentDataset?.district.center ?? districtSummary?.center ?? [23.2599, 77.4126];
+  const modeCount = mode === "projects" ? filteredProjects.length : filteredInventory.length;
+  const hasFilters = stage !== "All stages" || roadType !== "All road types" || search.length > 0;
+  const loading = !currentDataset;
 
-  const selectedProject = visibleProjects.find((project) => project.id === selectedId);
-
-  const selectDistrict = (value: string) => {
-    setDistrict(value);
-    const firstMatch = projects.find((project) =>
-      value === "All districts" ? true : project.districts.includes(value),
-    );
-    if (firstMatch) setSelectedId(firstMatch.id);
-  };
-
-  const resetFilters = () => {
-    setDistrict("All districts");
+  function changeMode(nextMode: "projects" | "inventory") {
+    setMode(nextMode);
+    setRoadType("All road types");
     setStage("All stages");
-    setSelectedId(projects[0].id);
-  };
+    setSearch("");
+    setSelectedId(null);
+    setVisibleLimit(PAGE_SIZE);
+  }
+
+  function clearFilters() {
+    setStage("All stages");
+    setRoadType("All road types");
+    setSearch("");
+    setSelectedId(null);
+  }
 
   return (
     <main>
@@ -333,173 +413,235 @@ export function RoadWatch() {
           <span className="brand-mark" aria-hidden="true"><i /><i /></span>
           <span>MP Road Watch</span>
         </a>
-        <a className="header-link" href="#methodology">Verification method <span>↗</span></a>
+        <div className="header-actions">
+          <span className="update-stamp"><i /> Data checked 14 Jul 2026</span>
+          <a className="header-link" href="#methodology">Sources & cautions <span>↗</span></a>
+        </div>
       </header>
 
       <section className="hero" id="top">
         <div className="hero-copy">
-          <p className="eyebrow"><span /> Madhya Pradesh · Infrastructure intelligence</p>
-          <h1>See where the next<br />road will <em>move value.</em></h1>
+          <p className="eyebrow"><span /> Madhya Pradesh · Road intelligence</p>
+          <h1>Find the roads<br /><em>before value moves.</em></h1>
           <p className="hero-intro">
-            A district-wise view of proposed, approved and under-construction highways,
-            grounded in official NHAI, MoRTH and government releases.
+            Select any MP district to inspect active road projects by stage, then switch to the complete
+            official PMGSY GIS inventory of national, state, district and village roads.
           </p>
         </div>
         <div className="hero-stats" aria-label="Dataset summary">
-          <div><strong>{projects.length}</strong><span>tracked corridors</span></div>
-          <div><strong>{districts.length}</strong><span>districts covered</span></div>
-          <div><strong>2026</strong><span>latest source</span></div>
+          <div><strong>41,016</strong><span>mapped road records</span></div>
+          <div><strong>2,108</strong><span>active PMGSY works</span></div>
+          <div><strong>55</strong><span>district reports</span></div>
+        </div>
+      </section>
+
+      <section className="district-ribbon" aria-label="District selection">
+        <div>
+          <span className="district-step">01</span>
+          <label htmlFor="district-select">Choose district</label>
+        </div>
+        <div className="district-select-wrap">
+          <select id="district-select" value={districtCode} onChange={(event) => setDistrictCode(Number(event.target.value))}>
+            {districts.length === 0 && <option value={DEFAULT_DISTRICT}>Bhopal</option>}
+            {districts.map((item) => <option key={item.code} value={item.code}>{districtLabel(item.name)}</option>)}
+          </select>
+          <span aria-hidden="true">↓</span>
+        </div>
+        <div className="district-snapshot">
+          <span><strong>{formatNumber(districtSummary?.activeProjectCount ?? currentDataset?.ruralProjects.length ?? 0)}</strong> active rural works</span>
+          <span><strong>{formatNumber(districtSummary?.inventoryCount ?? currentDataset?.inventory.length ?? 0)}</strong> roads in inventory</span>
         </div>
       </section>
 
       <section className="tracker" aria-labelledby="tracker-title">
-        <div className="tracker-toolbar">
+        <div className="tracker-heading">
           <div>
-            <p className="section-kicker">Corridor tracker</p>
-            <h2 id="tracker-title">Official projects, mapped</h2>
+            <p className="section-kicker">{displayDistrictName} district</p>
+            <h2 id="tracker-title">Road project explorer</h2>
           </div>
-          <button className="filter-toggle" type="button" onClick={() => setFiltersOpen((value) => !value)}>
-            Filters <span>{district !== "All districts" || stage !== "All stages" ? "●" : "+"}</span>
-          </button>
+          <div className="mode-switch" role="tablist" aria-label="Road data view">
+            <button type="button" role="tab" aria-selected={mode === "projects"} className={mode === "projects" ? "active" : ""} onClick={() => changeMode("projects")}>
+              Active projects <span>{formatNumber(allProjects.length)}</span>
+            </button>
+            <button type="button" role="tab" aria-selected={mode === "inventory"} className={mode === "inventory" ? "active" : ""} onClick={() => changeMode("inventory")}>
+              All road inventory <span>{formatNumber(currentDataset?.inventory.length ?? 0)}</span>
+            </button>
+          </div>
         </div>
 
-        <div className={`filter-panel ${filtersOpen ? "filter-panel-open" : ""}`}>
-          <div className="filter-row">
-            <span className="filter-label">District</span>
-            <div className="filter-scroll">
-              {["All districts", ...districts].map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  className={district === item ? "chip chip-active" : "chip"}
-                  onClick={() => selectDistrict(item)}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
+        <div className="coverage-note">
+          <strong>{mode === "projects" ? "Investment signal" : "Network context"}</strong>
+          <span>
+            {mode === "projects"
+              ? "PMGSY pending/in-progress works plus selected major corridors verified from MoRTH, NHAI, PIB and MP government records."
+              : "All roads present in the official PMGSY open GIS layer. Inventory inclusion does not mean a road has a proposed or active project."}
+          </span>
+        </div>
+
+        {!loading && currentDataset.inventory.length === 0 && (
+          <div className="source-gap-note">
+            <strong>Legacy GIS boundary gap</strong>
+            <span>This newer district has active PMGSY records, but the public GIS inventory has not been split from its former parent district. A zero here does not mean there are no roads.</span>
           </div>
-          <div className="filter-row">
-            <span className="filter-label">Project stage</span>
-            <div className="filter-scroll">
-              {["All stages", ...stages].map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  className={stage === item ? "chip chip-active" : "chip"}
-                  onClick={() => {
-                    setStage(item as Stage | "All stages");
-                    const firstMatch = projects.find((project) => item === "All stages" || project.stage === item);
-                    if (firstMatch) setSelectedId(firstMatch.id);
-                  }}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-          </div>
+        )}
+
+        <div className="filter-panel">
+          <label className="search-field">
+            <span>Search</span>
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={mode === "projects" ? "Road, package or block" : "Road name or code"} />
+          </label>
+          {mode === "projects" && (
+            <label className="select-field">
+              <span>Project stage</span>
+              <select value={stage} onChange={(event) => setStage(event.target.value as ProjectStage | "All stages")}>
+                {projectStages.map((item) => <option key={item}>{item}</option>)}
+              </select>
+            </label>
+          )}
+          <label className="select-field">
+            <span>Road type</span>
+            <select value={roadType} onChange={(event) => setRoadType(event.target.value)}>
+              {(mode === "projects" ? projectTypes : inventoryTypes).map((item) => <option key={item}>{item}</option>)}
+            </select>
+          </label>
+          {hasFilters && <button type="button" className="clear-button" onClick={clearFilters}>Clear</button>}
         </div>
 
         <div className="workspace">
           <div className="project-column">
             <div className="result-count">
-              <span>{visibleProjects.length} corridor{visibleProjects.length === 1 ? "" : "s"}</span>
-              <span>Click to locate</span>
+              <span>{loading ? "Loading district data…" : `${formatNumber(modeCount)} ${mode === "projects" ? "project records" : "road records"}`}</span>
+              <span>Click a row to locate</span>
             </div>
-
             <div className="project-list">
-              {visibleProjects.map((project, index) => {
-                const selected = project.id === selectedProject?.id;
+              {!loading && mode === "projects" && filteredProjects.map((project, index) => {
+                const selected = project.id === activeSelectedId;
                 return (
                   <article key={project.id} className={selected ? "project-card project-card-active" : "project-card"}>
                     <button type="button" className="project-select" onClick={() => setSelectedId(project.id)} aria-pressed={selected}>
                       <span className="project-number">{String(index + 1).padStart(2, "0")}</span>
                       <span className="project-main">
                         <span className="project-meta">
-                          <span className="stage" style={{ "--stage-color": stageColors[project.stage] } as React.CSSProperties}>
-                            {project.stage}
-                          </span>
-                          <span>{project.sourceDate}</span>
+                          <span className="stage" style={{ "--stage-color": stageColors[project.stage] } as React.CSSProperties}>{project.stage}</span>
+                          <span>{project.category}</span>
                         </span>
                         <strong>{project.name}</strong>
                         <span className="road-name">{project.road}</span>
-                        <span className="district-line">{project.districts.join(" · ")}</span>
+                        <span className="district-line">{project.area}</span>
                       </span>
                       <span className="locate-arrow" aria-hidden="true">↗</span>
                     </button>
-
                     {selected && (
                       <div className="project-detail">
                         <div className="detail-grid">
-                          <span><small>Length</small>{project.length}</span>
-                          <span><small>Investment / mode</small>{project.investment}</span>
+                          <span><small>{project.detailOneLabel}</small>{project.detailOne}</span>
+                          <span><small>{project.detailTwoLabel}</small>{project.detailTwo}</span>
                         </div>
                         <p>{project.statusNote}</p>
-                        <a href={project.sourceUrl} target="_blank" rel="noreferrer">
-                          Open official source <span>↗</span>
-                        </a>
+                        <div className="precision-line"><i /> {project.locationPrecision}</div>
+                        <a href={project.sourceUrl} target="_blank" rel="noreferrer">Open official source <span>↗</span></a>
                       </div>
                     )}
                   </article>
                 );
               })}
 
-              {visibleProjects.length === 0 && (
+              {!loading && mode === "inventory" && visibleInventory.map((road, index) => {
+                const selected = road.id === activeSelectedId;
+                return (
+                  <article key={road.id} className={selected ? "project-card project-card-active" : "project-card"}>
+                    <button type="button" className="project-select" onClick={() => setSelectedId(road.id)} aria-pressed={selected}>
+                      <span className="project-number">{String(index + 1).padStart(3, "0")}</span>
+                      <span className="project-main">
+                        <span className="project-meta inventory-meta"><span>{road.category}</span><span>{road.code || "No road code"}</span></span>
+                        <strong>{road.name}</strong>
+                        <span className="road-name">Owner in GIS: {road.owner}</span>
+                      </span>
+                      <span className="locate-arrow" aria-hidden="true">↗</span>
+                    </button>
+                    {selected && (
+                      <div className="project-detail inventory-detail">
+                        <p>This road appears in PMGSY&apos;s official open GIS network layer. No construction stage is inferred from inventory membership.</p>
+                        <div className="precision-line"><i /> Official GIS road bounds</div>
+                        <a href="https://www.pib.gov.in/Pressreleaseshare.aspx?PRID=1808291&lang=2&reg=48" target="_blank" rel="noreferrer">About the official GIS release <span>↗</span></a>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+
+              {!loading && modeCount === 0 && (
                 <div className="empty-state">
-                  <strong>No matching corridor</strong>
-                  <p>Try another district or project stage.</p>
-                  <button type="button" onClick={resetFilters}>Clear filters</button>
+                  <strong>No matching roads</strong>
+                  <p>Try a broader stage, type or search.</p>
+                  <button type="button" onClick={clearFilters}>Clear filters</button>
                 </div>
+              )}
+              {loading && <div className="loading-state"><i /><span>Loading {displayDistrictName} roads</span></div>}
+              {mode === "inventory" && visibleInventory.length < filteredInventory.length && (
+                <button className="load-more" type="button" onClick={() => setVisibleLimit((value) => value + PAGE_SIZE)}>
+                  Load 100 more <span>{formatNumber(filteredInventory.length - visibleInventory.length)} remaining</span>
+                </button>
               )}
             </div>
           </div>
 
           <div className="map-column">
-            <CorridorMap visibleProjects={visibleProjects} selectedProject={selectedProject} onSelect={setSelectedId} />
+            <RoadMap
+              features={mode === "projects" ? projectFeatures : []}
+              selectedFeature={selectedFeature}
+              districtCenter={districtCenter}
+              mode={mode}
+              onSelect={setSelectedId}
+            />
             <div className="map-overlay map-title">
-              <span>Selected corridor</span>
-              <strong>{selectedProject?.name ?? "Filtered Madhya Pradesh view"}</strong>
+              <span>{mode === "projects" ? "Selected project" : "Selected inventory road"}</span>
+              <strong>{mode === "projects" ? selectedProject?.name ?? `${displayDistrictName} district` : selectedRoad?.name ?? `${displayDistrictName} district`}</strong>
             </div>
-            <div className="map-overlay map-note">
-              <span className="pulse" /> Approximate corridor anchors
-            </div>
-            <div className="map-legend">
-              {stages.map((item) => <span key={item}><i style={{ background: stageColors[item] }} />{item}</span>)}
-            </div>
+            <div className="map-overlay map-note"><span className="pulse" /> {selectedFeature?.locationPrecision ?? "Select a road to locate"}</div>
+            {mode === "projects" && (
+              <div className="map-legend">
+                {projectStages.slice(1).map((item) => <span key={item}><i style={{ background: stageColors[item as ProjectStage] }} />{item}</span>)}
+              </div>
+            )}
           </div>
         </div>
       </section>
 
+      <section className="road-breakdown" aria-labelledby="breakdown-title">
+        <div className="breakdown-heading">
+          <p className="section-kicker">District inventory</p>
+          <h2 id="breakdown-title">What is mapped in {displayDistrictName}</h2>
+          <p>Counts below come from the PMGSY open GIS road network, not from a construction-project register.</p>
+        </div>
+        <div className="breakdown-grid">
+          {inventoryTypes.slice(1).map((type) => (
+            <button key={type} type="button" onClick={() => { changeMode("inventory"); setRoadType(type); document.querySelector(".tracker")?.scrollIntoView({ behavior: "smooth" }); }}>
+              <span>{type}</span>
+              <strong>{formatNumber(districtSummary?.categoryCounts[type] ?? 0)}</strong>
+              <i style={{ width: `${Math.max(4, ((districtSummary?.categoryCounts[type] ?? 0) / Math.max(1, districtSummary?.inventoryCount ?? 1)) * 100)}%` }} />
+            </button>
+          ))}
+        </div>
+      </section>
+
       <section className="methodology" id="methodology">
-        <div>
+        <div className="method-intro">
           <p className="section-kicker">Before you evaluate land</p>
-          <h2>Signal, not a survey.</h2>
+          <h2>Evidence first.<br />Parcel check next.</h2>
+          <p>This is a screening tool, not a land-acquisition recommendation or notified alignment survey.</p>
         </div>
         <div className="method-cards">
-          <article>
-            <span>01</span>
-            <h3>Source first</h3>
-            <p>Every entry links to an official NHAI or Government of India record and keeps its publication date visible.</p>
-          </article>
-          <article>
-            <span>02</span>
-            <h3>Stage matters</h3>
-            <p>Approved, bid-stage and DPR-stage projects carry different execution risk. Treat the labels as distinct signals.</p>
-          </article>
-          <article>
-            <span>03</span>
-            <h3>Verify the parcel</h3>
-            <p>Map lines are approximate town-level anchors, not notified alignments. Check gazette notices, khasra maps, zoning and title locally before buying.</p>
-          </article>
+          <article><span>01</span><h3>Project status</h3><p>Village-road stages come from the official PMGSY OMMAS Sanction Award Progress report. Major corridors link to their NHAI, MoRTH, PIB or MP government record.</p></article>
+          <article><span>02</span><h3>Road inventory</h3><p>NH, SH, district and village-road inventory comes from PMGSY&apos;s public GIS release. It gives network context but does not itself indicate a future project.</p></article>
+          <article><span>03</span><h3>Location precision</h3><p>Matched PMGSY routes use official GIS geometry. Unmatched works use a district/block anchor. Major corridors are indicative unless a notified alignment is linked.</p></article>
+          <article><span>04</span><h3>Due diligence</h3><p>Before buying, verify current gazette notices, khasra maps, land-use zoning, title, access control, acquisition boundaries and local authority plans.</p></article>
         </div>
       </section>
 
       <footer>
-        <div className="brand footer-brand">
-          <span className="brand-mark" aria-hidden="true"><i /><i /></span>
-          <span>MP Road Watch</span>
-        </div>
-        <p>Curated for early-stage corridor research · Sources checked through 14 Jul 2026</p>
+        <div className="brand footer-brand"><span className="brand-mark" aria-hidden="true"><i /><i /></span><span>MP Road Watch</span></div>
+        <p>41,016 official GIS road records · 2,108 active PMGSY works · Sources checked through 14 Jul 2026</p>
         <a href="#top">Back to top ↑</a>
       </footer>
     </main>

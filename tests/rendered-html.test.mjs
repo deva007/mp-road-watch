@@ -20,10 +20,12 @@ test("server-renders the Madhya Pradesh road tracker", async () => {
 
   const html = await response.text();
   assert.match(html, /<title>Madhya Pradesh Road Watch<\/title>/i);
-  assert.match(html, /See where the next/);
-  assert.match(html, /Official projects, mapped/);
-  assert.match(html, /Hiwarkhedi/);
-  assert.match(html, /Badnawar/);
-  assert.match(html, /Open official source/);
+  assert.match(html, /Find the roads/);
+  assert.match(html, /Road project explorer/);
+  assert.match(html, /Active projects/);
+  assert.match(html, /All road inventory/);
+  assert.match(html, /Bhopal/);
+  assert.match(html, /41,016/);
+  assert.match(html, /PMGSY/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 });
