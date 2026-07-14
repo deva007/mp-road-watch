@@ -22,6 +22,7 @@ type InventoryRoad = {
   owner: string;
   blockCode: number;
   bounds: [number, number, number, number];
+  route: [number, number][] | null;
 };
 
 type RuralProject = {
@@ -253,6 +254,14 @@ function RoadMap({
       }
 
       if (selectedFeature?.route) {
+        if (mode === "inventory") {
+          L.polyline(selectedFeature.route, {
+            color: "#d96f38",
+            weight: 6,
+            opacity: 0.92,
+            lineCap: "round",
+          }).addTo(layer).bindTooltip(selectedFeature.name, { sticky: true, direction: "top" });
+        }
         selectedFeature.route.forEach((point, index) => {
           if (index !== 0 && index !== selectedFeature.route!.length - 1) return;
           L.circleMarker(point, {
@@ -379,9 +388,9 @@ export function RoadWatch() {
       ? {
           id: selectedRoad.id,
           name: selectedRoad.name,
-          route: null,
+          route: selectedRoad.route,
           bounds: selectedRoad.bounds,
-          locationPrecision: "Official GIS road bounds",
+          locationPrecision: selectedRoad.route ? "Official GIS road line" : "Official GIS road bounds",
         }
       : undefined;
   const activeSelectedId = mode === "projects" ? selectedProject?.id : selectedRoad?.id;
@@ -562,7 +571,7 @@ export function RoadWatch() {
                     {selected && (
                       <div className="project-detail inventory-detail">
                         <p>This road appears in PMGSY&apos;s official open GIS network layer. No construction stage is inferred from inventory membership.</p>
-                        <div className="precision-line"><i /> Official GIS road bounds</div>
+                        <div className="precision-line"><i /> {road.route ? "Official GIS road line" : "Official GIS road bounds fallback"}</div>
                         <a href="https://www.pib.gov.in/Pressreleaseshare.aspx?PRID=1808291&lang=2&reg=48" target="_blank" rel="noreferrer">About the official GIS release <span>↗</span></a>
                       </div>
                     )}

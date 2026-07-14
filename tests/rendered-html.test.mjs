@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 async function render() {
@@ -28,4 +29,15 @@ test("server-renders the Madhya Pradesh road tracker", async () => {
   assert.match(html, /41,016/);
   assert.match(html, /PMGSY/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
+});
+
+test("inventory roads include selectable route geometry", async () => {
+  const dataUrl = new URL("../public/data/roads/579.json", import.meta.url);
+  const dataset = JSON.parse(await readFile(dataUrl, "utf8"));
+  const road = dataset.inventory.find(
+    (item) => item.name === "Karariya Tiraha to Shamshabad",
+  );
+
+  assert.ok(road, "expected the Vidisha inventory road from the map report");
+  assert.ok(road.route.length >= 2, "expected an official GIS road line");
 });

@@ -61,6 +61,16 @@ def road_match_score(left: str, right: str) -> float:
     return SequenceMatcher(None, left_normalized, right_normalized).ratio()
 
 
+def route_coordinates(route_json: str) -> list[list[float]] | None:
+    payload = json.loads(route_json)
+    coordinates = payload.get("coordinates", [])
+    if payload.get("type") == "MultiLineString":
+        coordinates = max(coordinates, key=len, default=[])
+    if len(coordinates) < 2:
+        return None
+    return [[round(point[1], 6), round(point[0], 6)] for point in coordinates]
+
+
 def load_active_status(path: Path) -> list[dict]:
     records: dict[tuple[str, str], dict] = {}
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
@@ -76,8 +86,9 @@ def load_active_status(path: Path) -> list[dict]:
     return list(records.values())
 
 
-def load_gis() -> list[dict]:
+def load_gis(source: str) -> list[dict]:
     connection = duckdb.connect()
+    connection.execute("PRAGMA disable_progress_bar")
     connection.execute("INSTALL spatial; LOAD spatial")
     query = f"""
         SELECT
@@ -93,7 +104,7 @@ def load_gis() -> list[dict]:
             xmax,
             ymax,
             ST_AsGeoJSON(ST_Simplify(geometry, 0.00065)) AS route_json
-        FROM read_parquet('{GIS_URL}')
+        FROM read_parquet('{source}')
         WHERE STATE_ID = 20
           AND RoadName IS NOT NULL
     """
@@ -105,9 +116,9 @@ def load_gis() -> list[dict]:
     return list(unique_roads.values())
 
 
-def build(status_path: Path, output_root: Path) -> None:
+def build(status_path: Path, output_root: Path, gis_source: str = GIS_URL) -> None:
     active_status = load_active_status(status_path)
-    gis_records = load_gis()
+    gis_records = load_gis(gis_source)
 
     gis_by_district: dict[int, list[dict]] = defaultdict(list)
     gis_by_block: dict[tuple[int, int], list[dict]] = defaultdict(list)
@@ -142,6 +153,7 @@ def build(status_path: Path, output_root: Path) -> None:
                 round(float(road["ymax"]), 6),
                 round(float(road["xmax"]), 6),
             ]
+            route = route_coordinates(road["route_json"])
             inventory.append(
                 {
                     "id": f"gis-{road['ER_ID']}",
@@ -151,6 +163,7 @@ def build(status_path: Path, output_root: Path) -> None:
                     "owner": clean(road["RoadOwner"]) or "Not stated",
                     "blockCode": int(road["BLOCK_ID"] or 0),
                     "bounds": bounds,
+                    "route": route,
                 }
             )
 
@@ -189,8 +202,7 @@ def build(status_path: Path, output_root: Path) -> None:
                     round(float(matched["ymax"]), 6),
                     round(float(matched["xmax"]), 6),
                 ]
-                route_payload = json.loads(matched["route_json"])
-                route = [[round(point[1], 6), round(point[0], 6)] for point in route_payload["coordinates"]]
+                route = route_coordinates(matched["route_json"])
                 location_precision = "Matched to PMGSY GIS road"
 
             rural_projects.append(
@@ -275,5 +287,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("status_csv", type=Path)
     parser.add_argument("output_root", type=Path)
+    parser.add_argument("--gis-source", default=GIS_URL)
     arguments = parser.parse_args()
-    build(arguments.status_csv, arguments.output_root)
+    build(arguments.status_csv, arguments.output_root, arguments.gis_source)
