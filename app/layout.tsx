@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Sans, DM_Serif_Display } from "next/font/google";
+import { DM_Sans, DM_Serif_Display, Noto_Sans_Devanagari } from "next/font/google";
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
 
@@ -12,6 +12,11 @@ const dmSerif = DM_Serif_Display({
   variable: "--font-display",
   subsets: ["latin"],
   weight: "400",
+});
+
+const notoDevanagari = Noto_Sans_Devanagari({
+  variable: "--font-hindi",
+  subsets: ["devanagari"],
 });
 
 const siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://mp-road-watch.devamahe.chatgpt.site").replace(/\/$/, "");
@@ -51,7 +56,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${dmSans.variable} ${dmSerif.variable}`}>
+      <body className={`${dmSans.variable} ${dmSerif.variable} ${notoDevanagari.variable}`}>
         {children}
       </body>
     </html>

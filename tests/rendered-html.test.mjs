@@ -25,6 +25,8 @@ test("server-renders the Madhya Pradesh road tracker", async () => {
   assert.match(html, /Road project explorer/);
   assert.match(html, /Active projects/);
   assert.match(html, /All road inventory/);
+  assert.match(html, /aria-label="Choose language"/);
+  assert.match(html, /हिंदी/);
   assert.match(html, /Bhopal/);
   assert.match(html, /41,016/);
   assert.match(html, /PMGSY/);

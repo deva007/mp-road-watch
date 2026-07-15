@@ -2,6 +2,15 @@
 
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 import type { LayerGroup, Map as LeafletMap } from "leaflet";
+import {
+  majorProjectNotesHi,
+  translateDistrict,
+  translatePrecision,
+  translateRoadType,
+  translateStage,
+  translations,
+  type Language,
+} from "./i18n";
 import { majorProjects, type ProjectStage } from "./major-projects";
 
 type DistrictSummary = {
@@ -121,40 +130,39 @@ const stageColors: Record<ProjectStage, string> = {
   "DPR / proposed": "#687685",
 };
 
-const districtDisplayNames: Record<string, string> = {
-  Agar: "Agar Malwa (Agar in source)",
-  Hoshangabad: "Narmadapuram (Hoshangabad in source)",
-  Mandsour: "Mandsaur (Mandsour in source)",
-};
-
-function districtLabel(name: string) {
-  return districtDisplayNames[name] ?? name;
-}
-
 function formatNumber(value: number) {
   return new Intl.NumberFormat("en-IN").format(value);
 }
 
-function formatLength(value: number | null) {
-  if (value === null) return "Not stated";
-  if (value === 0) return "Bridge work";
-  return `${value.toLocaleString("en-IN", { maximumFractionDigits: 2 })} km`;
+function formatLength(value: number | null, language: Language) {
+  const t = translations[language];
+  if (value === null) return t.notStated;
+  if (value === 0) return t.bridgeWork;
+  return `${value.toLocaleString("en-IN", { maximumFractionDigits: 2 })} ${language === "hi" ? "किमी" : "km"}`;
 }
 
-function ruralProjectToDisplay(project: RuralProject): DisplayProject {
-  const progress = project.progress === null ? "Not reported" : `${project.progress}%`;
+function ruralProjectToDisplay(project: RuralProject, language: Language): DisplayProject {
+  const t = translations[language];
+  const progress = project.progress === null ? t.notReported : `${project.progress}%`;
+  const workType = language === "hi"
+    ? project.workType === "Bridge" ? t.bridge : t.road
+    : project.workType;
+  const sanctionDate = project.sanctionDate ? ` ${t.onDate} ${project.sanctionDate}` : "";
+  const precision = translatePrecision(project.locationPrecision, language);
   return {
     id: project.id,
     name: project.name,
     road: `${project.scheme}${project.package ? ` · ${project.package}` : ""}`,
     category: project.category,
     stage: project.stage,
-    area: `${project.block} block`,
-    detailOneLabel: "Length / work",
-    detailOne: project.workType === "Bridge" ? `Bridge · ${formatLength(project.length)}` : formatLength(project.length),
-    detailTwoLabel: "Reported progress",
+    area: `${project.block} ${language === "hi" ? "ब्लॉक" : "block"}`,
+    detailOneLabel: t.lengthWork,
+    detailOne: project.workType === "Bridge" ? `${workType} · ${formatLength(project.length, language)}` : formatLength(project.length, language),
+    detailTwoLabel: t.reportedProgress,
     detailTwo: progress,
-    statusNote: `${project.workType} record sanctioned${project.sanctionDate ? ` on ${project.sanctionDate}` : ""}. ${project.locationPrecision}.`,
+    statusNote: language === "hi"
+      ? `${workType} ${t.sanctionedRecord}${sanctionDate}। ${precision}।`
+      : `${workType} ${t.sanctionedRecord}${sanctionDate}. ${precision}.`,
     sourceName: "PMGSY · OMMAS Sanction Award Progress",
     sourceDate: project.year || "Live report",
     sourceUrl: project.sourceUrl,
@@ -164,7 +172,8 @@ function ruralProjectToDisplay(project: RuralProject): DisplayProject {
   };
 }
 
-function districtMajorProjects(districtName: string): DisplayProject[] {
+function districtMajorProjects(districtName: string, language: Language): DisplayProject[] {
+  const t = translations[language];
   return majorProjects
     .filter((project) => project.districts.includes(districtName))
     .map((project) => ({
@@ -173,16 +182,16 @@ function districtMajorProjects(districtName: string): DisplayProject[] {
       road: project.road,
       category: project.category,
       stage: project.stage,
-      area: project.districts.join(" · "),
-      detailOneLabel: "Length",
+      area: project.districts.map((district) => translateDistrict(district, language)).join(" · "),
+      detailOneLabel: t.length,
       detailOne: project.length,
-      detailTwoLabel: "Investment / mode",
+      detailTwoLabel: t.investmentMode,
       detailTwo: project.investment,
-      statusNote: project.statusNote,
+      statusNote: language === "hi" ? majorProjectNotesHi[project.id] ?? project.statusNote : project.statusNote,
       sourceName: project.sourceName,
       sourceDate: project.sourceDate,
       sourceUrl: project.sourceUrl,
-      locationPrecision: "Indicative corridor anchors",
+      locationPrecision: t.indicativeAnchors,
       route: project.route,
       bounds: null,
     }));
@@ -193,12 +202,14 @@ function RoadMap({
   selectedFeature,
   districtCenter,
   mode,
+  language,
   onSelect,
 }: {
   features: MapFeature[];
   selectedFeature: MapFeature | undefined;
   districtCenter: [number, number];
   mode: "projects" | "inventory";
+  language: Language;
   onSelect: (id: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -293,7 +304,7 @@ function RoadMap({
           weight: 3,
           fillColor: selectedFeature.stage ? stageColors[selectedFeature.stage] : "#214f42",
           fillOpacity: 0.92,
-        }).addTo(layer).bindTooltip(`${selectedFeature.name} · district/block anchor`);
+        }).addTo(layer).bindTooltip(`${selectedFeature.name} · ${translations[language].districtAnchor}`);
         map.setView(districtCenter, 10);
       } else {
         const routed = features.filter((feature) => feature.route).flatMap((feature) => feature.route!);
@@ -307,12 +318,13 @@ function RoadMap({
     return () => {
       cancelled = true;
     };
-  }, [districtCenter, features, mode, onSelect, selectedFeature]);
+  }, [districtCenter, features, language, mode, onSelect, selectedFeature]);
 
-  return <div ref={containerRef} className="map-canvas" aria-label="Map of roads and projects in the selected district" />;
+  return <div ref={containerRef} className="map-canvas" aria-label={translations[language].mapLabel} />;
 }
 
 export function RoadWatch() {
+  const [language, setLanguage] = useState<Language>("en");
   const [districts, setDistricts] = useState<DistrictSummary[]>([]);
   const [districtCode, setDistrictCode] = useState(DEFAULT_DISTRICT);
   const [dataset, setDataset] = useState<DistrictDataset | null>(null);
@@ -323,6 +335,7 @@ export function RoadWatch() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
+  const t = translations[language];
 
   useEffect(() => {
     fetch(`${PUBLIC_BASE_PATH}/data/roads/districts.json`)
@@ -355,9 +368,12 @@ export function RoadWatch() {
   const districtSummary = districts.find((item) => item.code === districtCode);
   const currentDataset = dataset?.district.code === districtCode ? dataset : null;
   const districtName = currentDataset?.district.name ?? districtSummary?.name ?? "Bhopal";
-  const displayDistrictName = districtLabel(districtName);
+  const displayDistrictName = translateDistrict(districtName, language);
   const allProjects = currentDataset
-    ? [...currentDataset.ruralProjects.map(ruralProjectToDisplay), ...districtMajorProjects(districtName)]
+    ? [
+        ...currentDataset.ruralProjects.map((project) => ruralProjectToDisplay(project, language)),
+        ...districtMajorProjects(districtName, language),
+      ]
     : [];
   const filteredProjects = allProjects.filter((project) => {
     const stageMatch = stage === "All stages" || project.stage === stage;
@@ -391,7 +407,7 @@ export function RoadWatch() {
           name: selectedRoad.name,
           route: selectedRoad.route,
           bounds: selectedRoad.bounds,
-          locationPrecision: selectedRoad.route ? "Official GIS road line" : "Official GIS road bounds",
+          locationPrecision: selectedRoad.route ? t.officialGisRoadLine : t.officialGisRoadBounds,
         }
       : undefined;
   const activeSelectedId = mode === "projects" ? selectedProject?.id : selectedRoad?.id;
@@ -416,112 +432,118 @@ export function RoadWatch() {
     setSelectedId(null);
   }
 
+  function changeLanguage(nextLanguage: Language) {
+    setLanguage(nextLanguage);
+    document.documentElement.lang = nextLanguage;
+  }
+
   return (
-    <main>
+    <main data-language={language}>
       <header className="site-header">
-        <a className="brand" href="#top" aria-label="Madhya Pradesh Road Watch home">
+        <a className="brand" href="#top" aria-label={t.homeLabel}>
           <span className="brand-mark" aria-hidden="true"><i /><i /></span>
           <span>MP Road Watch</span>
         </a>
         <div className="header-actions">
-          <span className="update-stamp"><i /> Data checked 14 Jul 2026</span>
-          <a className="header-link" href="#methodology">Sources & cautions <span>↗</span></a>
+          <div className="language-toggle" role="group" aria-label={t.languageLabel}>
+            <button type="button" className={language === "en" ? "active" : ""} aria-pressed={language === "en"} aria-label={t.english} onClick={() => changeLanguage("en")}>EN</button>
+            <button type="button" className={language === "hi" ? "active" : ""} aria-pressed={language === "hi"} aria-label={t.hindi} onClick={() => changeLanguage("hi")}>हिंदी</button>
+          </div>
+          <span className="update-stamp"><i /> {t.dataChecked}</span>
+          <a className="header-link" href="#methodology">{t.sourcesCautions} <span>↗</span></a>
         </div>
       </header>
 
       <section className="hero" id="top">
         <div className="hero-copy">
-          <p className="eyebrow"><span /> Madhya Pradesh · Road intelligence</p>
-          <h1>Find the roads<br /><em>before value moves.</em></h1>
-          <p className="hero-intro">
-            Select any MP district to inspect active road projects by stage, then switch to the complete
-            official PMGSY GIS inventory of national, state, district and village roads.
-          </p>
+          <p className="eyebrow"><span /> {t.eyebrow}</p>
+          <h1>{t.headlineLead}<br /><em>{t.headlineAccent}</em></h1>
+          <p className="hero-intro">{t.heroIntro}</p>
         </div>
-        <div className="hero-stats" aria-label="Dataset summary">
-          <div><strong>41,016</strong><span>mapped road records</span></div>
-          <div><strong>2,108</strong><span>active PMGSY works</span></div>
-          <div><strong>55</strong><span>district reports</span></div>
+        <div className="hero-stats" aria-label={t.datasetSummary}>
+          <div><strong>41,016</strong><span>{t.mappedRoadRecords}</span></div>
+          <div><strong>2,108</strong><span>{t.activePmgsWorks}</span></div>
+          <div><strong>55</strong><span>{t.districtReports}</span></div>
         </div>
       </section>
 
-      <section className="district-ribbon" aria-label="District selection">
+      <section className="district-ribbon" aria-label={t.districtSelection}>
         <div>
           <span className="district-step">01</span>
-          <label htmlFor="district-select">Choose district</label>
+          <label htmlFor="district-select">{t.chooseDistrict}</label>
         </div>
         <div className="district-select-wrap">
           <select id="district-select" value={districtCode} onChange={(event) => setDistrictCode(Number(event.target.value))}>
-            {districts.length === 0 && <option value={DEFAULT_DISTRICT}>Bhopal</option>}
-            {districts.map((item) => <option key={item.code} value={item.code}>{districtLabel(item.name)}</option>)}
+            {districts.length === 0 && <option value={DEFAULT_DISTRICT}>{translateDistrict("Bhopal", language)}</option>}
+            {districts.map((item) => <option key={item.code} value={item.code}>{translateDistrict(item.name, language)}</option>)}
           </select>
           <span aria-hidden="true">↓</span>
         </div>
         <div className="district-snapshot">
-          <span><strong>{formatNumber(districtSummary?.activeProjectCount ?? currentDataset?.ruralProjects.length ?? 0)}</strong> active rural works</span>
-          <span><strong>{formatNumber(districtSummary?.inventoryCount ?? currentDataset?.inventory.length ?? 0)}</strong> roads in inventory</span>
+          <span><strong>{formatNumber(districtSummary?.activeProjectCount ?? currentDataset?.ruralProjects.length ?? 0)}</strong> {t.activeRuralWorks}</span>
+          <span><strong>{formatNumber(districtSummary?.inventoryCount ?? currentDataset?.inventory.length ?? 0)}</strong> {t.roadsInInventory}</span>
         </div>
       </section>
 
       <section className="tracker" aria-labelledby="tracker-title">
         <div className="tracker-heading">
           <div>
-            <p className="section-kicker">{displayDistrictName} district</p>
-            <h2 id="tracker-title">Road project explorer</h2>
+            <p className="section-kicker">{displayDistrictName} {t.district}</p>
+            <h2 id="tracker-title">{t.roadProjectExplorer}</h2>
           </div>
-          <div className="mode-switch" role="tablist" aria-label="Road data view">
+          <div className="mode-switch" role="tablist" aria-label={t.roadDataView}>
             <button type="button" role="tab" aria-selected={mode === "projects"} className={mode === "projects" ? "active" : ""} onClick={() => changeMode("projects")}>
-              Active projects <span>{formatNumber(allProjects.length)}</span>
+              {t.activeProjects} <span>{formatNumber(allProjects.length)}</span>
             </button>
             <button type="button" role="tab" aria-selected={mode === "inventory"} className={mode === "inventory" ? "active" : ""} onClick={() => changeMode("inventory")}>
-              All road inventory <span>{formatNumber(currentDataset?.inventory.length ?? 0)}</span>
+              {t.allRoadInventory} <span>{formatNumber(currentDataset?.inventory.length ?? 0)}</span>
             </button>
           </div>
         </div>
 
         <div className="coverage-note">
-          <strong>{mode === "projects" ? "Investment signal" : "Network context"}</strong>
+          <strong>{mode === "projects" ? t.investmentSignal : t.networkContext}</strong>
           <span>
             {mode === "projects"
-              ? "PMGSY pending/in-progress works plus selected major corridors verified from MoRTH, NHAI, PIB and MP government records."
-              : "All roads present in the official PMGSY open GIS layer. Inventory inclusion does not mean a road has a proposed or active project."}
+              ? t.projectCoverage
+              : t.inventoryCoverage}
           </span>
         </div>
 
         {!loading && currentDataset.inventory.length === 0 && (
           <div className="source-gap-note">
-            <strong>Legacy GIS boundary gap</strong>
-            <span>This newer district has active PMGSY records, but the public GIS inventory has not been split from its former parent district. A zero here does not mean there are no roads.</span>
+            <strong>{t.legacyGap}</strong>
+            <span>{t.legacyGapDetail}</span>
           </div>
         )}
 
         <div className="filter-panel">
           <label className="search-field">
-            <span>Search</span>
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={mode === "projects" ? "Road, package or block" : "Road name or code"} />
+            <span>{t.search}</span>
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={mode === "projects" ? t.projectPlaceholder : t.inventoryPlaceholder} />
           </label>
           {mode === "projects" && (
             <label className="select-field">
-              <span>Project stage</span>
+              <span>{t.projectStage}</span>
               <select value={stage} onChange={(event) => setStage(event.target.value as ProjectStage | "All stages")}>
-                {projectStages.map((item) => <option key={item}>{item}</option>)}
+                {projectStages.map((item) => <option key={item} value={item}>{translateStage(item, language)}</option>)}
               </select>
             </label>
           )}
           <label className="select-field">
-            <span>Road type</span>
+            <span>{t.roadType}</span>
             <select value={roadType} onChange={(event) => setRoadType(event.target.value)}>
-              {(mode === "projects" ? projectTypes : inventoryTypes).map((item) => <option key={item}>{item}</option>)}
+              {(mode === "projects" ? projectTypes : inventoryTypes).map((item) => <option key={item} value={item}>{translateRoadType(item, language)}</option>)}
             </select>
           </label>
-          {hasFilters && <button type="button" className="clear-button" onClick={clearFilters}>Clear</button>}
+          {hasFilters && <button type="button" className="clear-button" onClick={clearFilters}>{t.clear}</button>}
         </div>
 
         <div className="workspace">
           <div className="project-column">
             <div className="result-count">
-              <span>{loading ? "Loading district data…" : `${formatNumber(modeCount)} ${mode === "projects" ? "project records" : "road records"}`}</span>
-              <span>Click a row to locate</span>
+              <span>{loading ? t.loadingDistrictData : `${formatNumber(modeCount)} ${mode === "projects" ? t.projectRecords : t.roadRecords}`}</span>
+              <span>{t.clickRow}</span>
             </div>
             <div className="project-list">
               {!loading && mode === "projects" && filteredProjects.map((project, index) => {
@@ -532,8 +554,8 @@ export function RoadWatch() {
                       <span className="project-number">{String(index + 1).padStart(2, "0")}</span>
                       <span className="project-main">
                         <span className="project-meta">
-                          <span className="stage" style={{ "--stage-color": stageColors[project.stage] } as React.CSSProperties}>{project.stage}</span>
-                          <span>{project.category}</span>
+                          <span className="stage" style={{ "--stage-color": stageColors[project.stage] } as React.CSSProperties}>{translateStage(project.stage, language)}</span>
+                          <span>{translateRoadType(project.category, language)}</span>
                         </span>
                         <strong>{project.name}</strong>
                         <span className="road-name">{project.road}</span>
@@ -548,8 +570,8 @@ export function RoadWatch() {
                           <span><small>{project.detailTwoLabel}</small>{project.detailTwo}</span>
                         </div>
                         <p>{project.statusNote}</p>
-                        <div className="precision-line"><i /> {project.locationPrecision}</div>
-                        <a href={project.sourceUrl} target="_blank" rel="noreferrer">Open official source <span>↗</span></a>
+                        <div className="precision-line"><i /> {translatePrecision(project.locationPrecision, language)}</div>
+                        <a href={project.sourceUrl} target="_blank" rel="noreferrer">{t.openOfficialSource} <span>↗</span></a>
                       </div>
                     )}
                   </article>
@@ -563,17 +585,17 @@ export function RoadWatch() {
                     <button type="button" className="project-select" onClick={() => setSelectedId(road.id)} aria-pressed={selected}>
                       <span className="project-number">{String(index + 1).padStart(3, "0")}</span>
                       <span className="project-main">
-                        <span className="project-meta inventory-meta"><span>{road.category}</span><span>{road.code || "No road code"}</span></span>
+                        <span className="project-meta inventory-meta"><span>{translateRoadType(road.category, language)}</span><span>{road.code || t.noRoadCode}</span></span>
                         <strong>{road.name}</strong>
-                        <span className="road-name">Owner in GIS: {road.owner}</span>
+                        <span className="road-name">{t.ownerInGis}: {road.owner}</span>
                       </span>
                       <span className="locate-arrow" aria-hidden="true">↗</span>
                     </button>
                     {selected && (
                       <div className="project-detail inventory-detail">
-                        <p>This road appears in PMGSY&apos;s official open GIS network layer. No construction stage is inferred from inventory membership.</p>
-                        <div className="precision-line"><i /> {road.route ? "Official GIS road line" : "Official GIS road bounds fallback"}</div>
-                        <a href="https://www.pib.gov.in/Pressreleaseshare.aspx?PRID=1808291&lang=2&reg=48" target="_blank" rel="noreferrer">About the official GIS release <span>↗</span></a>
+                        <p>{t.inventoryMembership}</p>
+                        <div className="precision-line"><i /> {road.route ? t.officialGisRoadLine : t.officialGisRoadBoundsFallback}</div>
+                        <a href="https://www.pib.gov.in/Pressreleaseshare.aspx?PRID=1808291&lang=2&reg=48" target="_blank" rel="noreferrer">{t.aboutGisRelease} <span>↗</span></a>
                       </div>
                     )}
                   </article>
@@ -582,15 +604,15 @@ export function RoadWatch() {
 
               {!loading && modeCount === 0 && (
                 <div className="empty-state">
-                  <strong>No matching roads</strong>
-                  <p>Try a broader stage, type or search.</p>
-                  <button type="button" onClick={clearFilters}>Clear filters</button>
+                  <strong>{t.noMatchingRoads}</strong>
+                  <p>{t.tryBroader}</p>
+                  <button type="button" onClick={clearFilters}>{t.clearFilters}</button>
                 </div>
               )}
-              {loading && <div className="loading-state"><i /><span>Loading {displayDistrictName} roads</span></div>}
+              {loading && <div className="loading-state"><i /><span>{t.loadingRoads}: {displayDistrictName}</span></div>}
               {mode === "inventory" && visibleInventory.length < filteredInventory.length && (
                 <button className="load-more" type="button" onClick={() => setVisibleLimit((value) => value + PAGE_SIZE)}>
-                  Load 100 more <span>{formatNumber(filteredInventory.length - visibleInventory.length)} remaining</span>
+                  {t.loadMore} <span>{formatNumber(filteredInventory.length - visibleInventory.length)} {t.remaining}</span>
                 </button>
               )}
             </div>
@@ -602,16 +624,17 @@ export function RoadWatch() {
               selectedFeature={selectedFeature}
               districtCenter={districtCenter}
               mode={mode}
+              language={language}
               onSelect={setSelectedId}
             />
             <div className="map-overlay map-title">
-              <span>{mode === "projects" ? "Selected project" : "Selected inventory road"}</span>
-              <strong>{mode === "projects" ? selectedProject?.name ?? `${displayDistrictName} district` : selectedRoad?.name ?? `${displayDistrictName} district`}</strong>
+              <span>{mode === "projects" ? t.selectedProject : t.selectedInventoryRoad}</span>
+              <strong>{mode === "projects" ? selectedProject?.name ?? `${displayDistrictName} ${t.district}` : selectedRoad?.name ?? `${displayDistrictName} ${t.district}`}</strong>
             </div>
-            <div className="map-overlay map-note"><span className="pulse" /> {selectedFeature?.locationPrecision ?? "Select a road to locate"}</div>
+            <div className="map-overlay map-note"><span className="pulse" /> {selectedFeature?.locationPrecision ? translatePrecision(selectedFeature.locationPrecision, language) : t.selectRoad}</div>
             {mode === "projects" && (
               <div className="map-legend">
-                {projectStages.slice(1).map((item) => <span key={item}><i style={{ background: stageColors[item as ProjectStage] }} />{item}</span>)}
+                {projectStages.slice(1).map((item) => <span key={item}><i style={{ background: stageColors[item as ProjectStage] }} />{translateStage(item, language)}</span>)}
               </div>
             )}
           </div>
@@ -620,14 +643,14 @@ export function RoadWatch() {
 
       <section className="road-breakdown" aria-labelledby="breakdown-title">
         <div className="breakdown-heading">
-          <p className="section-kicker">District inventory</p>
-          <h2 id="breakdown-title">What is mapped in {displayDistrictName}</h2>
-          <p>Counts below come from the PMGSY open GIS road network, not from a construction-project register.</p>
+          <p className="section-kicker">{t.districtInventory}</p>
+          <h2 id="breakdown-title">{t.whatMapped} {displayDistrictName}</h2>
+          <p>{t.breakdownDetail}</p>
         </div>
         <div className="breakdown-grid">
           {inventoryTypes.slice(1).map((type) => (
             <button key={type} type="button" onClick={() => { changeMode("inventory"); setRoadType(type); document.querySelector(".tracker")?.scrollIntoView({ behavior: "smooth" }); }}>
-              <span>{type}</span>
+              <span>{translateRoadType(type, language)}</span>
               <strong>{formatNumber(districtSummary?.categoryCounts[type] ?? 0)}</strong>
               <i style={{ width: `${Math.max(4, ((districtSummary?.categoryCounts[type] ?? 0) / Math.max(1, districtSummary?.inventoryCount ?? 1)) * 100)}%` }} />
             </button>
@@ -637,22 +660,22 @@ export function RoadWatch() {
 
       <section className="methodology" id="methodology">
         <div className="method-intro">
-          <p className="section-kicker">Before you evaluate land</p>
-          <h2>Evidence first.<br />Parcel check next.</h2>
-          <p>This is a screening tool, not a land-acquisition recommendation or notified alignment survey.</p>
+          <p className="section-kicker">{t.beforeLand}</p>
+          <h2>{t.evidenceFirst}<br />{t.parcelNext}</h2>
+          <p>{t.screeningTool}</p>
         </div>
         <div className="method-cards">
-          <article><span>01</span><h3>Project status</h3><p>Village-road stages come from the official PMGSY OMMAS Sanction Award Progress report. Major corridors link to their NHAI, MoRTH, PIB or MP government record.</p></article>
-          <article><span>02</span><h3>Road inventory</h3><p>NH, SH, district and village-road inventory comes from PMGSY&apos;s public GIS release. It gives network context but does not itself indicate a future project.</p></article>
-          <article><span>03</span><h3>Location precision</h3><p>Matched PMGSY routes use official GIS geometry. Unmatched works use a district/block anchor. Major corridors are indicative unless a notified alignment is linked.</p></article>
-          <article><span>04</span><h3>Due diligence</h3><p>Before buying, verify current gazette notices, khasra maps, land-use zoning, title, access control, acquisition boundaries and local authority plans.</p></article>
+          <article><span>01</span><h3>{t.projectStatus}</h3><p>{t.projectStatusDetail}</p></article>
+          <article><span>02</span><h3>{t.roadInventory}</h3><p>{t.roadInventoryDetail}</p></article>
+          <article><span>03</span><h3>{t.locationPrecision}</h3><p>{t.locationPrecisionDetail}</p></article>
+          <article><span>04</span><h3>{t.dueDiligence}</h3><p>{t.dueDiligenceDetail}</p></article>
         </div>
       </section>
 
       <footer>
         <div className="brand footer-brand"><span className="brand-mark" aria-hidden="true"><i /><i /></span><span>MP Road Watch</span></div>
-        <p>41,016 official GIS road records · 2,108 active PMGSY works · Sources checked through 14 Jul 2026</p>
-        <a href="#top">Back to top ↑</a>
+        <p>{t.footerSources}</p>
+        <a href="#top">{t.backToTop} ↑</a>
       </footer>
     </main>
   );
