@@ -87,6 +87,7 @@ type MapFeature = {
 
 const DEFAULT_DISTRICT = 76;
 const PAGE_SIZE = 100;
+const PUBLIC_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const projectStages: (ProjectStage | "All stages")[] = [
   "All stages",
   "In progress",
@@ -324,7 +325,7 @@ export function RoadWatch() {
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
 
   useEffect(() => {
-    fetch("/data/roads/districts.json")
+    fetch(`${PUBLIC_BASE_PATH}/data/roads/districts.json`)
       .then((response) => {
         if (!response.ok) throw new Error("District index unavailable");
         return response.json() as Promise<DistrictSummary[]>;
@@ -335,7 +336,7 @@ export function RoadWatch() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`/data/roads/${districtCode}.json`, { signal: controller.signal })
+    fetch(`${PUBLIC_BASE_PATH}/data/roads/${districtCode}.json`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("District data unavailable");
         return response.json() as Promise<DistrictDataset>;
