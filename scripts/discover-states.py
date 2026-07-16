@@ -37,7 +37,7 @@ def main(source: str) -> None:
     name_select = f", any_value({name_column}) AS state_name" if name_column else ""
     rows = connection.execute(
         f"""
-        SELECT STATE_ID, count(*) AS roads {name_select}
+        SELECT STATE_ID, count(*) AS roads {name_select}, any_value(RoadName) AS sample_road
         FROM read_parquet('{source}')
         GROUP BY STATE_ID
         ORDER BY STATE_ID
@@ -47,6 +47,9 @@ def main(source: str) -> None:
         entry = {"stateId": row[0], "roads": row[1]}
         if name_column:
             entry["stateName"] = row[2]
+            entry["sampleRoad"] = row[3]
+        else:
+            entry["sampleRoad"] = row[2]
         print(json.dumps(entry))
 
 
