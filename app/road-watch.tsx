@@ -339,7 +339,7 @@ export function RoadWatch() {
   const [districts, setDistricts] = useState<DistrictSummary[]>([]);
   const [districtCode, setDistrictCode] = useState(DEFAULT_DISTRICT);
   const [dataset, setDataset] = useState<DistrictDataset | null>(null);
-  const [mode, setMode] = useState<"projects" | "inventory">("projects");
+  const [mode, setMode] = useState<"projects" | "inventory">("inventory");
   const [stage, setStage] = useState<ProjectStage | "All stages">("All stages");
   const [roadType, setRoadType] = useState("All road types");
   const [search, setSearch] = useState("");
