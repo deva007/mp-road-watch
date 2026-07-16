@@ -19,7 +19,7 @@ const notoDevanagari = Noto_Sans_Devanagari({
   subsets: ["devanagari"],
 });
 
-const siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://mp-road-watch.devamahe.chatgpt.site").replace(/\/$/, "");
+const siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://deva007.github.io").replace(/\/$/, "");
 const siteBasePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const siteUrl = `${siteOrigin}${siteBasePath}`;
 const title = "Madhya Pradesh Road Watch";

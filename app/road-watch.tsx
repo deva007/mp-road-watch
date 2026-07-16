@@ -334,36 +334,58 @@ export function RoadWatch() {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
+  const [dataCheckedAt, setDataCheckedAt] = useState<string | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
+  const lastLoadedDistrict = useRef<number | null>(null);
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
   const t = translations[language];
 
   useEffect(() => {
-    fetch(`${PUBLIC_BASE_PATH}/data/roads/districts.json`)
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") setRefreshTick((tick) => tick + 1);
+    }, 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    fetch(`${PUBLIC_BASE_PATH}/data/roads/meta.json`, { cache: "no-cache" })
+      .then((response) => response.ok ? (response.json() as Promise<{ dataCheckedAt: string }>) : null)
+      .then((meta) => { if (meta?.dataCheckedAt) setDataCheckedAt(meta.dataCheckedAt); })
+      .catch(() => {});
+  }, [refreshTick]);
+
+  useEffect(() => {
+    fetch(`${PUBLIC_BASE_PATH}/data/roads/districts.json`, { cache: "no-cache" })
       .then((response) => {
         if (!response.ok) throw new Error("District index unavailable");
         return response.json() as Promise<DistrictSummary[]>;
       })
       .then(setDistricts)
-      .catch(() => setDistricts([]));
-  }, []);
+      .catch(() => {});
+  }, [refreshTick]);
 
   useEffect(() => {
+    const districtChanged = lastLoadedDistrict.current !== districtCode;
     const controller = new AbortController();
-    fetch(`${PUBLIC_BASE_PATH}/data/roads/${districtCode}.json`, { signal: controller.signal })
+    fetch(`${PUBLIC_BASE_PATH}/data/roads/${districtCode}.json`, { signal: controller.signal, cache: "no-cache" })
       .then((response) => {
         if (!response.ok) throw new Error("District data unavailable");
         return response.json() as Promise<DistrictDataset>;
       })
       .then((data) => {
+        lastLoadedDistrict.current = districtCode;
         setDataset(data);
-        setSelectedId(null);
-        setVisibleLimit(PAGE_SIZE);
+        if (districtChanged) {
+          setSelectedId(null);
+          setVisibleLimit(PAGE_SIZE);
+        }
       })
       .catch((error: Error) => {
-        if (error.name !== "AbortError") setDataset(null);
+        // Background refresh failures keep the last good data on screen.
+        if (error.name !== "AbortError" && districtChanged) setDataset(null);
       });
     return () => controller.abort();
-  }, [districtCode]);
+  }, [districtCode, refreshTick]);
 
   const districtSummary = districts.find((item) => item.code === districtCode);
   const currentDataset = dataset?.district.code === districtCode ? dataset : null;
@@ -415,6 +437,12 @@ export function RoadWatch() {
   const modeCount = mode === "projects" ? filteredProjects.length : filteredInventory.length;
   const hasFilters = stage !== "All stages" || roadType !== "All road types" || search.length > 0;
   const loading = !currentDataset;
+  const checkedDate = dataCheckedAt ? new Date(dataCheckedAt) : null;
+  const checkedLabel = checkedDate && !Number.isNaN(checkedDate.getTime())
+    ? checkedDate.toDateString() === new Date().toDateString()
+      ? t.today
+      : new Intl.DateTimeFormat(language === "hi" ? "hi-IN" : "en-IN", { day: "numeric", month: "short", year: "numeric" }).format(checkedDate)
+    : null;
 
   function changeMode(nextMode: "projects" | "inventory") {
     setMode(nextMode);
@@ -449,7 +477,7 @@ export function RoadWatch() {
             <button type="button" className={language === "en" ? "active" : ""} aria-pressed={language === "en"} aria-label={t.english} onClick={() => changeLanguage("en")}>EN</button>
             <button type="button" className={language === "hi" ? "active" : ""} aria-pressed={language === "hi"} aria-label={t.hindi} onClick={() => changeLanguage("hi")}>हिंदी</button>
           </div>
-          <span className="update-stamp"><i /> {t.dataChecked}</span>
+          {checkedLabel && <span className="update-stamp"><i /> {t.dataChecked} {checkedLabel}</span>}
           <a className="header-link" href="#methodology">{t.sourcesCautions} <span>↗</span></a>
         </div>
       </header>
