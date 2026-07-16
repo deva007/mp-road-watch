@@ -14,7 +14,8 @@ test("static export renders the Madhya Pradesh road tracker", async () => {
   assert.match(html, /aria-label="Choose language"/);
   assert.match(html, /हिंदी/);
   assert.match(html, /Bhopal/);
-  assert.match(html, /41,016/);
+  assert.match(html, /Madhya Pradesh/);
+  assert.match(html, /mapped road records/);
   assert.match(html, /PMGSY/);
 });
 
@@ -26,13 +27,18 @@ test("static export bundles the road data and freshness stamp", async () => {
     "expected meta.json to carry a valid dataCheckedAt date",
   );
 
-  const registryUrl = new URL("../out/data/roads/districts.json", import.meta.url);
+  const statesUrl = new URL("../out/data/roads/states.json", import.meta.url);
+  const states = JSON.parse(await readFile(statesUrl, "utf8"));
+  assert.ok(states.length >= 1, "expected at least one state in the index");
+  assert.equal(states[0].name, "Madhya Pradesh");
+
+  const registryUrl = new URL("../out/data/roads/20/districts.json", import.meta.url);
   const registry = JSON.parse(await readFile(registryUrl, "utf8"));
   assert.ok(registry.length >= 50, "expected the full district registry");
 });
 
 test("inventory roads include selectable route geometry", async () => {
-  const dataUrl = new URL("../public/data/roads/579.json", import.meta.url);
+  const dataUrl = new URL("../public/data/roads/20/579.json", import.meta.url);
   const dataset = JSON.parse(await readFile(dataUrl, "utf8"));
   const road = dataset.inventory.find(
     (item) => item.name === "Karariya Tiraha to Shamshabad",

@@ -87,7 +87,7 @@ def load_active_status(path: Path) -> list[dict]:
     return list(records.values())
 
 
-def load_gis(source: str) -> list[dict]:
+def load_gis(source: str, state_id: int) -> list[dict]:
     connection = duckdb.connect()
     connection.execute("PRAGMA disable_progress_bar")
     connection.execute("INSTALL spatial; LOAD spatial")
@@ -106,7 +106,7 @@ def load_gis(source: str) -> list[dict]:
             ymax,
             ST_AsGeoJSON(ST_Simplify(geometry, 0.00065)) AS route_json
         FROM read_parquet('{source}')
-        WHERE STATE_ID = 20
+        WHERE STATE_ID = {int(state_id)}
           AND RoadName IS NOT NULL
     """
     columns = [column[0] for column in connection.execute(query).description]
@@ -117,11 +117,11 @@ def load_gis(source: str) -> list[dict]:
     return list(unique_roads.values())
 
 
-def load_gis_with_retry(source: str, attempts: int = 3, base_delay: float = 30.0) -> list[dict]:
+def load_gis_with_retry(source: str, state_id: int, attempts: int = 3, base_delay: float = 30.0) -> list[dict]:
     """Remote sources (gov mirrors, R2) fail transiently; retry with backoff."""
     for attempt in range(1, attempts + 1):
         try:
-            return load_gis(source)
+            return load_gis(source, state_id)
         except Exception as error:  # noqa: BLE001 - duckdb raises varied types
             if attempt == attempts:
                 raise
@@ -131,9 +131,28 @@ def load_gis_with_retry(source: str, attempts: int = 3, base_delay: float = 30.0
     raise RuntimeError("unreachable")
 
 
-def build(status_path: Path, output_root: Path, gis_source: str = GIS_URL) -> None:
+def update_states_index(data_root: Path, state_id: int, state_name: str, district_count: int) -> None:
+    """Merge this state's entry into data_root/states.json (the state picker index)."""
+    states_path = data_root / "states.json"
+    states = []
+    if states_path.is_file():
+        states = json.loads(states_path.read_text(encoding="utf-8"))
+    states = [entry for entry in states if entry.get("id") != state_id]
+    states.append({"id": state_id, "name": state_name, "districtCount": district_count})
+    states.sort(key=lambda entry: entry["name"])
+    with states_path.open("w", encoding="utf-8") as handle:
+        json.dump(states, handle, ensure_ascii=True, separators=(",", ":"))
+
+
+def build(
+    status_path: Path,
+    output_root: Path,
+    gis_source: str = GIS_URL,
+    state_id: int = 20,
+    state_name: str = "Madhya Pradesh",
+) -> None:
     active_status = load_active_status(status_path)
-    gis_records = load_gis_with_retry(gis_source)
+    gis_records = load_gis_with_retry(gis_source, state_id)
 
     gis_by_district: dict[int, list[dict]] = defaultdict(list)
     gis_by_block: dict[tuple[int, int], list[dict]] = defaultdict(list)
@@ -246,7 +265,7 @@ def build(status_path: Path, output_root: Path, gis_source: str = GIS_URL) -> No
                     "route": route,
                     "sourceUrl": (
                         "https://pmgsy.dord.gov.in/MvcReportViewer.aspx?"
-                        f"_r=%2fPMGSYCitizen%2fSanctionAwardProgress&State=20&District={district_code}&Scheme=0"
+                        f"_r=%2fPMGSYCitizen%2fSanctionAwardProgress&State={state_id}&District={district_code}&Scheme=0"
                     ),
                 }
             )
@@ -287,6 +306,8 @@ def build(status_path: Path, output_root: Path, gis_source: str = GIS_URL) -> No
     with (output_root / "districts.json").open("w", encoding="utf-8") as handle:
         json.dump(registry, handle, ensure_ascii=True, separators=(",", ":"))
 
+    update_states_index(output_root.parent, state_id, state_name, len(registry))
+
     print(
         json.dumps(
             {
@@ -299,9 +320,20 @@ def build(status_path: Path, output_root: Path, gis_source: str = GIS_URL) -> No
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Build per-district road datasets for one state. "
+        "output_root should be the per-state directory, e.g. public/data/roads/20",
+    )
     parser.add_argument("status_csv", type=Path)
     parser.add_argument("output_root", type=Path)
     parser.add_argument("--gis-source", default=GIS_URL)
+    parser.add_argument("--state-id", type=int, default=20, help="PMGSY STATE_ID (20 = Madhya Pradesh)")
+    parser.add_argument("--state-name", default="Madhya Pradesh")
     arguments = parser.parse_args()
-    build(arguments.status_csv, arguments.output_root, arguments.gis_source)
+    build(
+        arguments.status_csv,
+        arguments.output_root,
+        arguments.gis_source,
+        arguments.state_id,
+        arguments.state_name,
+    )

@@ -8,10 +8,17 @@ import {
   translatePrecision,
   translateRoadType,
   translateStage,
+  translateState,
   translations,
   type Language,
 } from "./i18n";
 import { majorProjects, type ProjectStage } from "./major-projects";
+
+type StateSummary = {
+  id: number;
+  name: string;
+  districtCount: number;
+};
 
 type DistrictSummary = {
   code: number;
@@ -94,6 +101,8 @@ type MapFeature = {
   locationPrecision: string;
 };
 
+const DEFAULT_STATE = 20;
+const DEFAULT_STATE_NAME = "Madhya Pradesh";
 const DEFAULT_DISTRICT = 76;
 const PAGE_SIZE = 100;
 const PUBLIC_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -325,6 +334,8 @@ function RoadMap({
 
 export function RoadWatch() {
   const [language, setLanguage] = useState<Language>("en");
+  const [states, setStates] = useState<StateSummary[]>([]);
+  const [stateId, setStateId] = useState(DEFAULT_STATE);
   const [districts, setDistricts] = useState<DistrictSummary[]>([]);
   const [districtCode, setDistrictCode] = useState(DEFAULT_DISTRICT);
   const [dataset, setDataset] = useState<DistrictDataset | null>(null);
@@ -336,7 +347,7 @@ export function RoadWatch() {
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
   const [dataCheckedAt, setDataCheckedAt] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
-  const lastLoadedDistrict = useRef<number | null>(null);
+  const lastLoadedDistrict = useRef<string | null>(null);
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
   const t = translations[language];
 
@@ -355,25 +366,44 @@ export function RoadWatch() {
   }, [refreshTick]);
 
   useEffect(() => {
-    fetch(`${PUBLIC_BASE_PATH}/data/roads/districts.json`, { cache: "no-cache" })
+    fetch(`${PUBLIC_BASE_PATH}/data/roads/states.json`, { cache: "no-cache" })
       .then((response) => {
-        if (!response.ok) throw new Error("District index unavailable");
-        return response.json() as Promise<DistrictSummary[]>;
+        if (!response.ok) throw new Error("State index unavailable");
+        return response.json() as Promise<StateSummary[]>;
       })
-      .then(setDistricts)
+      .then(setStates)
       .catch(() => {});
   }, [refreshTick]);
 
   useEffect(() => {
-    const districtChanged = lastLoadedDistrict.current !== districtCode;
     const controller = new AbortController();
-    fetch(`${PUBLIC_BASE_PATH}/data/roads/${districtCode}.json`, { signal: controller.signal, cache: "no-cache" })
+    fetch(`${PUBLIC_BASE_PATH}/data/roads/${stateId}/districts.json`, { signal: controller.signal, cache: "no-cache" })
+      .then((response) => {
+        if (!response.ok) throw new Error("District index unavailable");
+        return response.json() as Promise<DistrictSummary[]>;
+      })
+      .then((registry) => {
+        setDistricts(registry);
+        // After a state switch the previous district code may not exist here.
+        setDistrictCode((current) =>
+          registry.some((item) => item.code === current) ? current : registry[0]?.code ?? current,
+        );
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [stateId, refreshTick]);
+
+  useEffect(() => {
+    const loadKey = `${stateId}/${districtCode}`;
+    const districtChanged = lastLoadedDistrict.current !== loadKey;
+    const controller = new AbortController();
+    fetch(`${PUBLIC_BASE_PATH}/data/roads/${loadKey}.json`, { signal: controller.signal, cache: "no-cache" })
       .then((response) => {
         if (!response.ok) throw new Error("District data unavailable");
         return response.json() as Promise<DistrictDataset>;
       })
       .then((data) => {
-        lastLoadedDistrict.current = districtCode;
+        lastLoadedDistrict.current = loadKey;
         setDataset(data);
         if (districtChanged) {
           setSelectedId(null);
@@ -385,7 +415,7 @@ export function RoadWatch() {
         if (error.name !== "AbortError" && districtChanged) setDataset(null);
       });
     return () => controller.abort();
-  }, [districtCode, refreshTick]);
+  }, [stateId, districtCode, refreshTick]);
 
   const districtSummary = districts.find((item) => item.code === districtCode);
   const currentDataset = dataset?.district.code === districtCode ? dataset : null;
@@ -437,12 +467,20 @@ export function RoadWatch() {
   const modeCount = mode === "projects" ? filteredProjects.length : filteredInventory.length;
   const hasFilters = stage !== "All stages" || roadType !== "All road types" || search.length > 0;
   const loading = !currentDataset;
+  const totalInventory = districts.reduce((sum, item) => sum + item.inventoryCount, 0);
+  const totalProjects = districts.reduce((sum, item) => sum + item.activeProjectCount, 0);
   const checkedDate = dataCheckedAt ? new Date(dataCheckedAt) : null;
   const checkedLabel = checkedDate && !Number.isNaN(checkedDate.getTime())
     ? checkedDate.toDateString() === new Date().toDateString()
       ? t.today
       : new Intl.DateTimeFormat(language === "hi" ? "hi-IN" : "en-IN", { day: "numeric", month: "short", year: "numeric" }).format(checkedDate)
     : null;
+
+  function changeState(nextStateId: number) {
+    setStateId(nextStateId);
+    setSelectedId(null);
+    setVisibleLimit(PAGE_SIZE);
+  }
 
   function changeMode(nextMode: "projects" | "inventory") {
     setMode(nextMode);
@@ -489,15 +527,26 @@ export function RoadWatch() {
           <p className="hero-intro">{t.heroIntro}</p>
         </div>
         <div className="hero-stats" aria-label={t.datasetSummary}>
-          <div><strong>41,016</strong><span>{t.mappedRoadRecords}</span></div>
-          <div><strong>2,108</strong><span>{t.activePmgsWorks}</span></div>
-          <div><strong>55</strong><span>{t.districtReports}</span></div>
+          <div><strong>{districts.length ? formatNumber(totalInventory) : "…"}</strong><span>{t.mappedRoadRecords}</span></div>
+          <div><strong>{districts.length ? formatNumber(totalProjects) : "…"}</strong><span>{t.activePmgsWorks}</span></div>
+          <div><strong>{districts.length ? formatNumber(districts.length) : "…"}</strong><span>{t.districtReports}</span></div>
         </div>
       </section>
 
       <section className="district-ribbon" aria-label={t.districtSelection}>
         <div>
           <span className="district-step">01</span>
+          <label htmlFor="state-select">{t.chooseState}</label>
+        </div>
+        <div className="district-select-wrap state-select-wrap">
+          <select id="state-select" value={stateId} onChange={(event) => changeState(Number(event.target.value))}>
+            {states.length === 0 && <option value={DEFAULT_STATE}>{translateState(DEFAULT_STATE_NAME, language)}</option>}
+            {states.map((item) => <option key={item.id} value={item.id}>{translateState(item.name, language)}</option>)}
+          </select>
+          <span aria-hidden="true">↓</span>
+        </div>
+        <div>
+          <span className="district-step">02</span>
           <label htmlFor="district-select">{t.chooseDistrict}</label>
         </div>
         <div className="district-select-wrap">

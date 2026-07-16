@@ -20,6 +20,7 @@ export const translations = {
     activePmgsWorks: "active PMGSY works",
     districtReports: "district reports",
     districtSelection: "District selection",
+    chooseState: "Choose state",
     chooseDistrict: "Choose district",
     activeRuralWorks: "active rural works",
     roadsInInventory: "roads in inventory",
@@ -112,6 +113,7 @@ export const translations = {
     activePmgsWorks: "सक्रिय PMGSY कार्य",
     districtReports: "जिला रिपोर्ट",
     districtSelection: "जिला चयन",
+    chooseState: "राज्य चुनें",
     chooseDistrict: "जिला चुनें",
     activeRuralWorks: "सक्रिय ग्रामीण कार्य",
     roadsInInventory: "सूची में सड़कें",
@@ -305,6 +307,15 @@ export function translateStage(stage: ProjectStage | "All stages", language: Lan
 
 export function translateRoadType(type: string, language: Language): string {
   return roadTypeLabels[language][type] ?? type;
+}
+
+const hindiStateNames: Record<string, string> = {
+  "Madhya Pradesh": "मध्य प्रदेश",
+};
+
+export function translateState(name: string, language: Language): string {
+  if (language === "hi") return hindiStateNames[name] ?? name;
+  return name;
 }
 
 export function translateDistrict(name: string, language: Language): string {

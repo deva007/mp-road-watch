@@ -10,17 +10,20 @@ Live site: https://deva007.github.io/mp-road-watch/
 
 The site is fully static — no server, no database. A Python pipeline turns
 official PMGSY exports into one JSON file per district under
-`public/data/roads/`, and a Next.js static export serves them from GitHub
-Pages.
+`public/data/roads/{stateId}/`, and a Next.js static export serves them from
+GitHub Pages.
 
 ```
-scripts/build-road-data.py  →  public/data/roads/*.json  →  next build (export)  →  GitHub Pages
+scripts/build-road-data.py  →  public/data/roads/{stateId}/*.json  →  next build (export)  →  GitHub Pages
 ```
 
-- `app/road-watch.tsx` — the whole UI: district picker, filters, project
-  list, Leaflet map. Auto-refreshes its data every 60 seconds while the tab
-  is visible, and keeps the last good data if a refresh fails.
-- `public/data/roads/districts.json` — district registry with summary counts.
+- `app/road-watch.tsx` — the whole UI: state + district pickers, filters,
+  project list, Leaflet map. Auto-refreshes its data every 60 seconds while
+  the tab is visible, and keeps the last good data if a refresh fails.
+- `public/data/roads/states.json` — state index driving the state picker
+  (maintained automatically by the pipeline).
+- `public/data/roads/{stateId}/districts.json` — per-state district registry
+  with summary counts (20 = Madhya Pradesh).
 - `public/data/roads/meta.json` — generated at build time
   (`scripts/write-data-meta.mjs`) from the last git commit touching the data;
   drives the "Data checked" stamp in the header.
@@ -48,7 +51,7 @@ scripts/build-road-data.py  →  public/data/roads/*.json  →  next build (expo
    retry/backoff for flaky mirrors):
 
    ```bash
-   python3 scripts/build-road-data.py path/to/status.csv public/data/roads
+   python3 scripts/build-road-data.py path/to/status.csv public/data/roads/20 --state-id 20
    python3 scripts/validate-road-data.py public/data/roads
    ```
 
@@ -59,6 +62,31 @@ scripts/build-road-data.py  →  public/data/roads/*.json  →  next build (expo
 
 The "Data checked" stamp updates automatically from the commit date — no
 manual date edits needed.
+
+**Known gap — full automation.** The OMMAS status CSV has no stable,
+scriptable export URL (it is an ASPX report portal), so step 1 is manual.
+Everything after it is automated and guarded. If a reliable CSV endpoint is
+found, wiring it into a scheduled workflow makes the whole refresh
+hands-off — until then, the manual download is the one human step.
+
+## Adding another state
+
+The site is state-aware; adding a state is a data task, not a code task:
+
+1. Find the state's PMGSY `STATE_ID` (Madhya Pradesh is 20) and download its
+   OMMAS status CSV.
+2. Run: `python3 scripts/build-road-data.py status.csv public/data/roads/<id> --state-id <id> --state-name "<Name>"`
+   — this writes the district files and adds the state to `states.json`
+   automatically, so it appears in the site's state picker.
+3. Add Hindi names for the state and its districts in `app/i18n.ts`
+   (`hindiStateNames`, `hindiDistrictNames`) — untranslated names fall back
+   to English.
+4. Validate and push.
+
+Mind the scale: each state adds roughly 10–20 MB of JSON. GitHub Pages has a
+1 GB site soft limit, so going far beyond a handful of states calls for
+tighter geometry simplification (`ST_Simplify` tolerance in
+`build-road-data.py`).
 
 ## Deployment
 
