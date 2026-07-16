@@ -19,11 +19,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history so the "Data checked" stamp reflects the last
+          # commit that actually touched public/data/roads.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Never deploy a partial or corrupt dataset — fail here and the
+      # last good deploy stays live.
+      - run: python3 scripts/validate-road-data.py public/data/roads
       - run: npm run build:pages
         env:
           GITHUB_PAGES: "true"

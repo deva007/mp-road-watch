@@ -15,8 +15,10 @@
 
 # next.js
 /.next/
-/.vinext/
 /out/
+
+# generated at build time by scripts/write-data-meta.mjs
+/public/data/roads/meta.json
 
 # misc
 .DS_Store

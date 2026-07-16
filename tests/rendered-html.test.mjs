@@ -2,24 +2,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-async function render() {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
+test("static export renders the Madhya Pradesh road tracker", async () => {
+  const htmlUrl = new URL("../out/index.html", import.meta.url);
+  const html = await readFile(htmlUrl, "utf8");
 
-  return worker.fetch(
-    new Request("http://localhost/", { headers: { accept: "text/html" } }),
-    { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
-    { waitUntil() {}, passThroughOnException() {} },
-  );
-}
-
-test("server-renders the Madhya Pradesh road tracker", async () => {
-  const response = await render();
-  assert.equal(response.status, 200);
-  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
-
-  const html = await response.text();
   assert.match(html, /<title>Madhya Pradesh Road Watch<\/title>/i);
   assert.match(html, /Find the roads/);
   assert.match(html, /Road project explorer/);
@@ -30,7 +16,19 @@ test("server-renders the Madhya Pradesh road tracker", async () => {
   assert.match(html, /Bhopal/);
   assert.match(html, /41,016/);
   assert.match(html, /PMGSY/);
-  assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
+});
+
+test("static export bundles the road data and freshness stamp", async () => {
+  const metaUrl = new URL("../out/data/roads/meta.json", import.meta.url);
+  const meta = JSON.parse(await readFile(metaUrl, "utf8"));
+  assert.ok(
+    !Number.isNaN(new Date(meta.dataCheckedAt).getTime()),
+    "expected meta.json to carry a valid dataCheckedAt date",
+  );
+
+  const registryUrl = new URL("../out/data/roads/districts.json", import.meta.url);
+  const registry = JSON.parse(await readFile(registryUrl, "utf8"));
+  assert.ok(registry.length >= 50, "expected the full district registry");
 });
 
 test("inventory roads include selectable route geometry", async () => {

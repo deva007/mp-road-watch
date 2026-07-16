@@ -11,10 +11,6 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: isGitHubPages,
   },
-  // The Pages build does not use the Cloudflare-only database and worker modules.
-  typescript: {
-    ignoreBuildErrors: isGitHubPages,
-  },
 };
 
 export default nextConfig;

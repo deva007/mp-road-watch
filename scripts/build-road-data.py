@@ -8,6 +8,7 @@ import csv
 import json
 import math
 import re
+import time
 from collections import defaultdict
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -116,9 +117,23 @@ def load_gis(source: str) -> list[dict]:
     return list(unique_roads.values())
 
 
+def load_gis_with_retry(source: str, attempts: int = 3, base_delay: float = 30.0) -> list[dict]:
+    """Remote sources (gov mirrors, R2) fail transiently; retry with backoff."""
+    for attempt in range(1, attempts + 1):
+        try:
+            return load_gis(source)
+        except Exception as error:  # noqa: BLE001 - duckdb raises varied types
+            if attempt == attempts:
+                raise
+            delay = base_delay * attempt
+            print(f"GIS load failed (attempt {attempt}/{attempts}): {error}; retrying in {delay:.0f}s")
+            time.sleep(delay)
+    raise RuntimeError("unreachable")
+
+
 def build(status_path: Path, output_root: Path, gis_source: str = GIS_URL) -> None:
     active_status = load_active_status(status_path)
-    gis_records = load_gis(gis_source)
+    gis_records = load_gis_with_retry(gis_source)
 
     gis_by_district: dict[int, list[dict]] = defaultdict(list)
     gis_by_block: dict[tuple[int, int], list[dict]] = defaultdict(list)
