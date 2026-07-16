@@ -1,0 +1,86 @@
+name: Build state road data
+
+# Runs on GitHub's servers, which have full internet access to the national
+# PMGSY GIS parquet — unlike local sandboxes. Two modes:
+#   discover — list STATE_IDs (and names when present) found in the parquet
+#   build    — build one state's district datasets and commit them to main
+# Active-project data needs that state's OMMAS CSV; pass it as csv_url for a
+# full build, or omit it for an inventory-only build (0 active projects).
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "discover (list states) or build (add one state)"
+        type: choice
+        options: [discover, build]
+        default: discover
+      state_id:
+        description: "PMGSY STATE_ID (build mode; e.g. 20 = Madhya Pradesh)"
+        type: string
+        required: false
+      state_name:
+        description: "State display name (build mode; e.g. Chhattisgarh)"
+        type: string
+        required: false
+      csv_url:
+        description: "Optional URL of the state's OMMAS status CSV (full build)"
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-build
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    if: inputs.mode == 'discover'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install duckdb
+      - name: List states in the GIS parquet
+        run: |
+          python3 scripts/discover-states.py | tee states.txt
+          { echo '## States found in the PMGSY GIS parquet'; echo '```'; cat states.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    if: inputs.mode == 'build'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install duckdb
+      - name: Validate inputs
+        run: |
+          if [ -z "${{ inputs.state_id }}" ] || [ -z "${{ inputs.state_name }}" ]; then
+            echo "build mode requires state_id and state_name" >&2
+            exit 1
+          fi
+      - name: Fetch OMMAS status CSV (optional)
+        if: inputs.csv_url != ''
+        run: curl -fsSL --retry 3 --retry-delay 10 -o status.csv "${{ inputs.csv_url }}"
+      - name: Build state datasets
+        run: |
+          CSV_FLAG=""
+          [ -f status.csv ] && CSV_FLAG="--status-csv status.csv"
+          python3 scripts/build-road-data.py "public/data/roads/${{ inputs.state_id }}" \
+            $CSV_FLAG --state-id "${{ inputs.state_id }}" --state-name "${{ inputs.state_name }}"
+      - name: Validate the full dataset
+        run: python3 scripts/validate-road-data.py public/data/roads
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/roads
+          git commit -m "Add road data for ${{ inputs.state_name }} (state ${{ inputs.state_id }})"
+          git pull --rebase origin main
+          git push origin HEAD:main
