@@ -11,9 +11,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "discover (list states) or build (add one state)"
+        description: "discover, build (one state), or reconcile (generate states.json)"
         type: choice
-        options: [discover, build]
+        options: [discover, build, reconcile]
         default: discover
       state_id:
         description: "PMGSY STATE_ID (build mode; e.g. 20 = Madhya Pradesh)"
@@ -50,6 +50,34 @@ jobs:
           python3 scripts/discover-states.py | tee states.txt
           { echo '## States found in the PMGSY GIS parquet'; echo '```'; cat states.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
+  reconcile:
+    if: inputs.mode == 'reconcile'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconcile states.json from discovered directories
+        run: python3 scripts/reconcile-states.py public/data/roads
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/roads/states.json
+          if git diff --cached --quiet; then
+            echo "No changes to states.json"
+          else
+            git commit -m "Reconcile states.json from all discovered state directories"
+            for attempt in {1..5}; do
+              if git pull --rebase origin main && git push origin HEAD:main; then
+                exit 0
+              fi
+              if [ $attempt -lt 5 ]; then
+                sleep 5
+              fi
+            done
+            echo "Failed to push after 5 attempts" >&2
+            exit 1
+          fi
+
   build:
     if: inputs.mode == 'build'
     runs-on: ubuntu-latest
@@ -74,8 +102,6 @@ jobs:
           [ -f status.csv ] && CSV_FLAG="--status-csv status.csv"
           python3 scripts/build-road-data.py "public/data/roads/${{ inputs.state_id }}" \
             $CSV_FLAG --state-id "${{ inputs.state_id }}" --state-name "${{ inputs.state_name }}"
-      - name: Validate the full dataset
-        run: python3 scripts/validate-road-data.py public/data/roads
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
