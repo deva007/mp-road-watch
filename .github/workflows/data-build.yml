@@ -32,7 +32,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: data-build
+  group: data-build-${{ inputs.mode }}-${{ inputs.state_id || 'all' }}
   cancel-in-progress: false
 
 jobs:
