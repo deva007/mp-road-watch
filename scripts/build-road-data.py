@@ -327,8 +327,6 @@ def build(
     with (output_root / "districts.json").open("w", encoding="utf-8") as handle:
         json.dump(registry, handle, ensure_ascii=True, separators=(",", ":"))
 
-    update_states_index(output_root.parent, state_id, state_name, len(registry))
-
     print(
         json.dumps(
             {
