@@ -51,7 +51,7 @@ scripts/build-road-data.py  →  public/data/roads/{stateId}/*.json  →  next b
    retry/backoff for flaky mirrors):
 
    ```bash
-   python3 scripts/build-road-data.py path/to/status.csv public/data/roads/20 --state-id 20
+   python3 scripts/build-road-data.py public/data/roads/20 --status-csv path/to/status.csv --state-id 20
    python3 scripts/validate-road-data.py public/data/roads
    ```
 
@@ -71,17 +71,23 @@ hands-off — until then, the manual download is the one human step.
 
 ## Adding another state
 
-The site is state-aware; adding a state is a data task, not a code task:
+The site is state-aware; adding a state is a data task, not a code task.
+The easiest path is the **"Build state road data" GitHub Actions workflow**
+(Actions tab → Build state road data → Run workflow):
 
-1. Find the state's PMGSY `STATE_ID` (Madhya Pradesh is 20) and download its
-   OMMAS status CSV.
-2. Run: `python3 scripts/build-road-data.py status.csv public/data/roads/<id> --state-id <id> --state-name "<Name>"`
-   — this writes the district files and adds the state to `states.json`
-   automatically, so it appears in the site's state picker.
-3. Add Hindi names for the state and its districts in `app/i18n.ts`
-   (`hindiStateNames`, `hindiDistrictNames`) — untranslated names fall back
-   to English.
-4. Validate and push.
+1. Run it in `discover` mode once — the run summary lists every `STATE_ID`
+   in the national GIS parquet (20 = Madhya Pradesh).
+2. Run it in `build` mode with the state's id and name. Without a CSV the
+   state is built inventory-only (full road network, 0 active projects);
+   pass `csv_url` pointing at the state's OMMAS status CSV for active
+   projects too. The workflow validates and commits straight to `main`,
+   which redeploys the site with the state in the picker.
+3. Optionally add Hindi names for the state and its districts in
+   `app/i18n.ts` (`hindiStateNames`, `hindiDistrictNames`) — untranslated
+   names fall back to English.
+
+The same build runs locally with
+`python3 scripts/build-road-data.py public/data/roads/<id> --state-id <id> --state-name "<Name>" [--status-csv status.csv]`.
 
 Mind the scale: each state adds roughly 10–20 MB of JSON. GitHub Pages has a
 1 GB site soft limit, so going far beyond a handful of states calls for

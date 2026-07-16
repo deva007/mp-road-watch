@@ -72,7 +72,9 @@ def route_coordinates(route_json: str) -> list[list[float]] | None:
     return [[round(point[1], 6), round(point[0], 6)] for point in coordinates]
 
 
-def load_active_status(path: Path) -> list[dict]:
+def load_active_status(path: Path | None) -> list[dict]:
+    if path is None:
+        return []
     records: dict[tuple[str, str], dict] = {}
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         for row in csv.DictReader(handle):
@@ -87,10 +89,23 @@ def load_active_status(path: Path) -> list[dict]:
     return list(records.values())
 
 
-def load_gis(source: str, state_id: int) -> list[dict]:
+# The parquet is a national export; some revisions carry district/state name
+# columns. Detect them so inventory-only states still get readable names.
+DISTRICT_NAME_CANDIDATES = ["DISTRICT_N", "DISTRICT_NA", "DISTRICT_NAME", "District_Name", "DistrictName"]
+
+
+def parquet_columns(connection, source: str) -> list[str]:
+    rows = connection.execute(f"DESCRIBE SELECT * FROM read_parquet('{source}') LIMIT 0").fetchall()
+    return [row[0] for row in rows]
+
+
+def load_gis(source: str, state_id: int) -> tuple[list[dict], dict[int, str]]:
     connection = duckdb.connect()
     connection.execute("PRAGMA disable_progress_bar")
     connection.execute("INSTALL spatial; LOAD spatial")
+    columns = parquet_columns(connection, source)
+    name_column = next((c for c in DISTRICT_NAME_CANDIDATES if c in columns), None)
+    name_select = f", {name_column} AS district_name" if name_column else ""
     query = f"""
         SELECT
             ER_ID,
@@ -105,19 +120,25 @@ def load_gis(source: str, state_id: int) -> list[dict]:
             xmax,
             ymax,
             ST_AsGeoJSON(ST_Simplify(geometry, 0.00065)) AS route_json
+            {name_select}
         FROM read_parquet('{source}')
         WHERE STATE_ID = {int(state_id)}
           AND RoadName IS NOT NULL
     """
-    columns = [column[0] for column in connection.execute(query).description]
+    result_columns = [column[0] for column in connection.execute(query).description]
     unique_roads = {}
+    gis_district_names: dict[int, str] = {}
     for row in connection.execute(query).fetchall():
-        record = dict(zip(columns, row))
+        record = dict(zip(result_columns, row))
         unique_roads.setdefault(record["ER_ID"], record)
-    return list(unique_roads.values())
+        if name_column and record.get("district_name"):
+            gis_district_names.setdefault(int(record["DISTRICT_I"]), str(record["district_name"]).strip().title())
+    return list(unique_roads.values()), gis_district_names
 
 
-def load_gis_with_retry(source: str, state_id: int, attempts: int = 3, base_delay: float = 30.0) -> list[dict]:
+def load_gis_with_retry(
+    source: str, state_id: int, attempts: int = 3, base_delay: float = 30.0
+) -> tuple[list[dict], dict[int, str]]:
     """Remote sources (gov mirrors, R2) fail transiently; retry with backoff."""
     for attempt in range(1, attempts + 1):
         try:
@@ -145,14 +166,14 @@ def update_states_index(data_root: Path, state_id: int, state_name: str, distric
 
 
 def build(
-    status_path: Path,
+    status_path: Path | None,
     output_root: Path,
     gis_source: str = GIS_URL,
     state_id: int = 20,
     state_name: str = "Madhya Pradesh",
 ) -> None:
     active_status = load_active_status(status_path)
-    gis_records = load_gis_with_retry(gis_source, state_id)
+    gis_records, gis_district_names = load_gis_with_retry(gis_source, state_id)
 
     gis_by_district: dict[int, list[dict]] = defaultdict(list)
     gis_by_block: dict[tuple[int, int], list[dict]] = defaultdict(list)
@@ -163,7 +184,7 @@ def build(
         gis_by_block[(district_code, block_code)].append(road)
 
     status_by_district: dict[int, list[dict]] = defaultdict(list)
-    district_names: dict[int, str] = {}
+    district_names: dict[int, str] = dict(gis_district_names)
     for record in active_status:
         district_code = int(clean(record["DISTRICT_CODE"]))
         district_names[district_code] = clean(record["DISTRICT"])
@@ -324,8 +345,13 @@ if __name__ == "__main__":
         description="Build per-district road datasets for one state. "
         "output_root should be the per-state directory, e.g. public/data/roads/20",
     )
-    parser.add_argument("status_csv", type=Path)
     parser.add_argument("output_root", type=Path)
+    parser.add_argument(
+        "--status-csv",
+        type=Path,
+        default=None,
+        help="OMMAS Sanction Award Progress CSV; omit for an inventory-only build",
+    )
     parser.add_argument("--gis-source", default=GIS_URL)
     parser.add_argument("--state-id", type=int, default=20, help="PMGSY STATE_ID (20 = Madhya Pradesh)")
     parser.add_argument("--state-name", default="Madhya Pradesh")
