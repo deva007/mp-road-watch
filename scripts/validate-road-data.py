@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Validate the published road datasets before deploying.
 
-Guards the deploy pipeline: if the data refresh ever produces a partial,
+Guards the deploy pipeline: if a data refresh ever produces a partial,
 empty, or corrupt dataset, this script fails the build and the last good
-deploy stays live. Run as `python3 scripts/validate-road-data.py public/data/roads`.
+deploy stays live.
+
+Layout: data_root/states.json lists states; each state's district files
+live in data_root/{stateId}/ with a districts.json registry.
+
+Run as `python3 scripts/validate-road-data.py public/data/roads`.
 """
 
 from __future__ import annotations
@@ -12,7 +17,6 @@ import json
 import sys
 from pathlib import Path
 
-MIN_DISTRICTS = 50
 MIN_TOTAL_INVENTORY = 30_000
 MIN_TOTAL_PROJECTS = 1_000
 DISTRICT_KEYS = {"district", "inventory", "ruralProjects"}
@@ -23,39 +27,39 @@ def fail(message: str) -> None:
     sys.exit(1)
 
 
-def main(data_root: Path) -> None:
-    registry_path = data_root / "districts.json"
-    if not registry_path.is_file():
-        fail(f"{registry_path} is missing")
-
+def load_json(path: Path):
+    if not path.is_file():
+        fail(f"{path} is missing")
     try:
-        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        return json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as error:
-        fail(f"districts.json is not valid JSON: {error}")
+        fail(f"{path} is not valid JSON: {error}")
 
-    if not isinstance(registry, list) or len(registry) < MIN_DISTRICTS:
+
+def validate_state(data_root: Path, state: dict) -> tuple[int, int]:
+    state_id = state.get("id")
+    if not isinstance(state_id, int) or not state.get("name"):
+        fail(f"states.json entry missing id or name: {state!r:.120}")
+
+    state_dir = data_root / str(state_id)
+    registry = load_json(state_dir / "districts.json")
+    if not isinstance(registry, list) or not registry:
+        fail(f"{state_dir}/districts.json is empty")
+    if len(registry) != state.get("districtCount"):
         fail(
-            f"expected at least {MIN_DISTRICTS} districts, "
-            f"found {len(registry) if isinstance(registry, list) else 'non-list payload'}"
+            f"state {state_id}: registry has {len(registry)} districts but "
+            f"states.json says {state.get('districtCount')}"
         )
 
     total_inventory = 0
     total_projects = 0
     for entry in registry:
         code = entry.get("code")
-        name = entry.get("name")
-        if not isinstance(code, int) or not name:
-            fail(f"registry entry missing code or name: {entry!r:.120}")
+        if not isinstance(code, int) or not entry.get("name"):
+            fail(f"state {state_id}: registry entry missing code or name: {entry!r:.120}")
 
-        district_path = data_root / f"{code}.json"
-        if not district_path.is_file():
-            fail(f"district file {district_path.name} listed in registry but missing")
-
-        try:
-            dataset = json.loads(district_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as error:
-            fail(f"{district_path.name} is not valid JSON: {error}")
-
+        district_path = state_dir / f"{code}.json"
+        dataset = load_json(district_path)
         if not DISTRICT_KEYS.issubset(dataset):
             fail(f"{district_path.name} missing keys {DISTRICT_KEYS - set(dataset)}")
 
@@ -63,17 +67,34 @@ def main(data_root: Path) -> None:
         project_count = len(dataset["ruralProjects"])
         if inventory_count != entry.get("inventoryCount"):
             fail(
-                f"{district_path.name}: inventory count {inventory_count} does not "
+                f"{district_path}: inventory count {inventory_count} does not "
                 f"match registry ({entry.get('inventoryCount')})"
             )
         if project_count != entry.get("activeProjectCount"):
             fail(
-                f"{district_path.name}: project count {project_count} does not "
+                f"{district_path}: project count {project_count} does not "
                 f"match registry ({entry.get('activeProjectCount')})"
             )
 
         total_inventory += inventory_count
         total_projects += project_count
+
+    return total_inventory, total_projects
+
+
+def main(data_root: Path) -> None:
+    states = load_json(data_root / "states.json")
+    if not isinstance(states, list) or not states:
+        fail("states.json must list at least one state")
+
+    total_inventory = 0
+    total_projects = 0
+    total_districts = 0
+    for state in states:
+        inventory, projects = validate_state(data_root, state)
+        total_inventory += inventory
+        total_projects += projects
+        total_districts += state["districtCount"]
 
     if total_inventory < MIN_TOTAL_INVENTORY:
         fail(f"total inventory {total_inventory} below floor {MIN_TOTAL_INVENTORY} — refusing partial dataset")
@@ -84,7 +105,8 @@ def main(data_root: Path) -> None:
         json.dumps(
             {
                 "ok": True,
-                "districts": len(registry),
+                "states": len(states),
+                "districts": total_districts,
                 "inventory": total_inventory,
                 "activeProjects": total_projects,
             }
