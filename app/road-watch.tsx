@@ -366,12 +366,17 @@ export function RoadWatch() {
   }, [refreshTick]);
 
   useEffect(() => {
-    fetch(`${PUBLIC_BASE_PATH}/data/roads/states.json`, { cache: "no-cache" })
+    fetch(`${PUBLIC_BASE_PATH}/data/roads/states-manifest.json`, { cache: "no-cache" })
       .then((response) => {
-        if (!response.ok) throw new Error("State index unavailable");
-        return response.json() as Promise<StateSummary[]>;
+        if (!response.ok) throw new Error("State manifest unavailable");
+        return response.json() as Promise<{ states: Array<StateSummary & { status: string }> }>;
       })
-      .then(setStates)
+      .then((manifest) => {
+        const deployedStates = manifest.states
+          .filter((state) => state.status === "deployed")
+          .map((state) => ({ id: state.id, name: state.name, districtCount: state.districtCount }));
+        setStates(deployedStates);
+      })
       .catch(() => {});
   }, [refreshTick]);
 
