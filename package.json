@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:pages": "node scripts/write-data-meta.mjs && next build",
+    "build:pages": "node scripts/write-data-meta.mjs && next build && mkdir -p out/data && cp -r public/data/roads out/data/",
     "test": "GITHUB_PAGES=true npm run build:pages && node --test tests/rendered-html.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "validate:data": "python3 scripts/validate-road-data.py public/data/roads"
