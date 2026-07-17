@@ -91,7 +91,17 @@ def load_active_status(path: Path | None) -> list[dict]:
 
 # The parquet is a national export; some revisions carry district/state name
 # columns. Detect them so inventory-only states still get readable names.
-DISTRICT_NAME_CANDIDATES = ["DISTRICT_N", "DISTRICT_NA", "DISTRICT_NAME", "District_Name", "DistrictName"]
+DISTRICT_NAME_CANDIDATES = [
+    "DISTRICT_N",
+    "DISTRICT_NA",
+    "DISTRICT_NAME",
+    "District_Name",
+    "DistrictName",
+    "District",
+    "DISTRICT",
+    "district_name",
+    "district"
+]
 
 
 def parquet_columns(connection, source: str) -> list[str]:
