@@ -310,7 +310,35 @@ export function translateRoadType(type: string, language: Language): string {
 }
 
 const hindiStateNames: Record<string, string> = {
+  "Arunachal Pradesh": "अरुणाचल प्रदेश",
+  "Assam": "असम",
+  "Bihar": "बिहार",
+  "Chhattisgarh": "छत्तीसगढ़",
+  "Dadra and Nagar Haveli": "दादरा और नगर हवेली",
+  "Goa": "गोआ",
+  "Gujarat": "गुजरात",
+  "Haryana": "हरियाणा",
+  "Himachal Pradesh": "हिमाचल प्रदेश",
+  "Jammu and Kashmir": "जम्मू और कश्मीर",
+  "Jharkhand": "झारखंड",
+  "Karnataka": "कर्नाटक",
+  "Kerala": "केरल",
+  "Lakshadweep": "लक्षद्वीप",
   "Madhya Pradesh": "मध्य प्रदेश",
+  "Maharashtra": "महाराष्ट्र",
+  "Manipur": "मणिपुर",
+  "Meghalaya": "मेघालय",
+  "Mizoram": "मिजोरम",
+  "Odisha": "ओडिशा",
+  "Puducherry": "पुडुचेरी",
+  "Punjab": "पंजाब",
+  "Rajasthan": "राजस्थान",
+  "Sikkim": "सिक्किम",
+  "Tamil Nadu": "तमिलनाडु",
+  "Telangana": "तेलंगाना",
+  "Uttar Pradesh": "उत्तर प्रदेश",
+  "Uttarakhand": "उत्तराखंड",
+  "West Bengal": "पश्चिम बंगाल",
 };
 
 export function translateState(name: string, language: Language): string {
