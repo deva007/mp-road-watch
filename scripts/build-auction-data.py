@@ -115,20 +115,39 @@ def sample_records() -> list[dict]:
     is sample=true and links to the IBAPI portal home, never a fake notice URL.
     """
     today = date.today()
+    # National spread — one representative city per buildable state so the map
+    # shows coverage everywhere. Clearly flagged sample; real IBAPI data replaces it.
     seeds = [
-        # state, district, city (lat,lng), bank, type, reserve(INR), days_out, pincode
-        ("Madhya Pradesh", "Indore", (22.7196, 75.8577), "State Bank of India", "Residential", 4200000, 12, "452001"),
-        ("Madhya Pradesh", "Bhopal", (23.2599, 77.4126), "Punjab National Bank", "Commercial", 9500000, 20, "462001"),
-        ("Maharashtra", "Pune", (18.5204, 73.8567), "Bank of Baroda", "Residential", 7300000, 9, "411001"),
-        ("Maharashtra", "Nagpur", (21.1458, 79.0882), "Union Bank of India", "Industrial", 15800000, 27, "440001"),
-        ("Karnataka", "Bengaluru Urban", (12.9716, 77.5946), "Canara Bank", "Plot / land", 6100000, 15, "560001"),
-        ("Karnataka", "Mysuru", (12.2958, 76.6394), "State Bank of India", "Residential", 3900000, 6, "570001"),
-        ("Tamil Nadu", "Coimbatore", (11.0168, 76.9558), "Indian Bank", "Commercial", 12500000, 18, "641001"),
-        ("Tamil Nadu", "Madurai", (9.9252, 78.1198), "Indian Overseas Bank", "Agricultural land", 2800000, 33, ""),
+        # state, city/district, (lat, lng), bank, type, reserve, days_out, pincode
+        ("Andhra Pradesh", "Visakhapatnam", (17.6868, 83.2185), "State Bank of India", "Residential", 5200000, 12, "530001"),
+        ("Arunachal Pradesh", "Itanagar", (27.0844, 93.6053), "State Bank of India", "Plot / land", 2600000, 21, "791111"),
+        ("Assam", "Guwahati", (26.1445, 91.7362), "Bank of Baroda", "Commercial", 8800000, 9, "781001"),
+        ("Bihar", "Patna", (25.5941, 85.1376), "Punjab National Bank", "Residential", 4300000, 15, "800001"),
+        ("Chhattisgarh", "Raipur", (21.2514, 81.6296), "Bank of India", "Industrial", 13400000, 27, "492001"),
         ("Gujarat", "Ahmedabad", (23.0225, 72.5714), "Bank of Baroda", "Residential", 5400000, 11, "380001"),
-        ("West Bengal", "Kolkata", (22.5726, 88.3639), "UCO Bank", "Commercial", 8700000, 22, "700001"),
+        ("Haryana", "Gurugram", (28.4595, 77.0266), "HDFC Bank", "Commercial", 18500000, 8, "122001"),
+        ("Himachal Pradesh", "Shimla", (31.1048, 77.1734), "State Bank of India", "Residential", 3600000, 33, "171001"),
+        ("Jammu and Kashmir", "Srinagar", (34.0837, 74.7973), "J&K Bank", "Plot / land", 4100000, 18, "190001"),
+        ("Jharkhand", "Ranchi", (23.3441, 85.3096), "Bank of India", "Residential", 3800000, 14, "834001"),
+        ("Karnataka", "Bengaluru Urban", (12.9716, 77.5946), "Canara Bank", "Plot / land", 6100000, 6, "560001"),
+        ("Kerala", "Ernakulam", (9.9312, 76.2673), "Federal Bank", "Commercial", 9700000, 20, "682001"),
+        ("Madhya Pradesh", "Indore", (22.7196, 75.8577), "State Bank of India", "Residential", 4200000, 12, "452001"),
+        ("Maharashtra", "Pune", (18.5204, 73.8567), "Bank of Baroda", "Residential", 7300000, 9, "411001"),
+        ("Manipur", "Imphal West", (24.8170, 93.9368), "State Bank of India", "Plot / land", 2400000, 30, "795001"),
+        ("Meghalaya", "East Khasi Hills", (25.5788, 91.8933), "State Bank of India", "Residential", 3100000, 25, "793001"),
+        ("Mizoram", "Aizawl", (23.7271, 92.7176), "State Bank of India", "Commercial", 4500000, 22, "796001"),
+        ("Nagaland", "Kohima", (25.6751, 94.1086), "State Bank of India", "Plot / land", 2700000, 19, "797001"),
+        ("Odisha", "Khordha", (20.2961, 85.8245), "UCO Bank", "Residential", 4600000, 13, "751001"),
+        ("Punjab", "Ludhiana", (30.9010, 75.8573), "Punjab National Bank", "Industrial", 15800000, 27, "141001"),
+        ("Rajasthan", "Jaipur", (26.9124, 75.7873), "Bank of Baroda", "Plot / land", 3300000, 16, "302001"),
+        ("Sikkim", "East Sikkim", (27.3389, 88.6065), "State Bank of India", "Residential", 3500000, 24, "737101"),
+        ("Tamil Nadu", "Chennai", (13.0827, 80.2707), "Indian Bank", "Commercial", 12500000, 10, "600001"),
+        ("Tripura", "West Tripura", (23.8315, 91.2868), "State Bank of India", "Residential", 2900000, 28, "799001"),
         ("Uttar Pradesh", "Lucknow", (26.8467, 80.9462), "Bank of India", "Residential", 4600000, 8, "226001"),
-        ("Rajasthan", "Jaipur", (26.9124, 75.7873), "Punjab National Bank", "Plot / land", 3300000, 25, "302001"),
+        ("Uttarakhand", "Dehradun", (30.3165, 78.0322), "State Bank of India", "Plot / land", 5100000, 17, "248001"),
+        ("West Bengal", "Kolkata", (22.5726, 88.3639), "UCO Bank", "Commercial", 8700000, 11, "700001"),
+        ("Telangana", "Hyderabad", (17.3850, 78.4867), "State Bank of India", "Commercial", 11200000, 15, "500001"),
+        ("Ladakh", "Leh", (34.1526, 77.5771), "State Bank of India", "Plot / land", 3900000, 34, "194101"),
     ]
     records = []
     for index, (state, district, (lat, lng), bank, ptype, reserve, days_out, pincode) in enumerate(seeds, start=1):

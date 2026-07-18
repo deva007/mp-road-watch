@@ -336,33 +336,58 @@ function RoadMap({
   return <div ref={containerRef} className="map-canvas" aria-label={translations[language].mapLabel} />;
 }
 
-type ComboItem = { kind: "state" | "district"; id: number; label: string; sub: string };
+type ComboItem = { kind: "state" | "district"; id: number; stateId: number; label: string; sub: string };
+
+type GlobalDistrict = { code: number; name: string; stateId: number; stateName: string };
+
+function CompactSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: number | string;
+  onChange: (value: string) => void;
+  options: { value: number | string; label: string }[];
+}) {
+  return (
+    <label className="cselect">
+      <span className="cselect-label">{label}</span>
+      <span className="cselect-shell">
+        <select className="cselect-input" value={value} onChange={(e) => onChange(e.target.value)}>
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        <span className="cselect-caret" aria-hidden="true">▾</span>
+      </span>
+    </label>
+  );
+}
 
 function SearchCombobox({
+  allDistricts,
   states,
-  districts,
-  stateId,
   currentLabel,
   nameLanguage,
   geoNames,
+  onJumpDistrict,
   onPickState,
-  onPickDistrict,
   placeholder,
 }: {
+  allDistricts: GlobalDistrict[];
   states: StateSummary[];
-  districts: DistrictSummary[];
-  stateId: number;
   currentLabel: string;
   nameLanguage: NameLanguage;
   geoNames: GeoNames | null;
+  onJumpDistrict: (stateId: number, code: number) => void;
   onPickState: (id: number) => void;
-  onPickDistrict: (code: number) => void;
   placeholder: string;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const stateName = states.find((item) => item.id === stateId)?.name ?? "";
 
   useEffect(() => {
     function onDocClick(event: MouseEvent) {
@@ -374,28 +399,31 @@ function SearchCombobox({
 
   const items = useMemo<ComboItem[]>(() => {
     const q = query.trim().toLowerCase();
-    const districtItems: ComboItem[] = districts.map((d) => ({
+    // Global: every district in the country, plus every state/UT.
+    const districtItems: ComboItem[] = allDistricts.map((d) => ({
       kind: "district",
       id: d.code,
+      stateId: d.stateId,
       label: translateDistrict(d.name, nameLanguage, geoNames),
-      sub: translateState(stateName, nameLanguage, geoNames),
+      sub: translateState(d.stateName, nameLanguage, geoNames),
     }));
     const stateItems: ComboItem[] = states.map((sState) => ({
       kind: "state",
       id: sState.id,
+      stateId: sState.id,
       label: translateState(sState.name, nameLanguage, geoNames),
       sub: "State / UT",
     }));
+    if (!q) return districtItems.slice(0, 30);
     const all = [...districtItems, ...stateItems];
-    const filtered = q
-      ? all.filter((it) => it.label.toLowerCase().includes(q) || it.sub.toLowerCase().includes(q))
-      : districtItems;
-    return filtered.slice(0, 40);
-  }, [query, districts, states, stateName, nameLanguage, geoNames]);
+    return all
+      .filter((it) => it.label.toLowerCase().includes(q) || it.sub.toLowerCase().includes(q))
+      .slice(0, 40);
+  }, [query, allDistricts, states, nameLanguage, geoNames]);
 
   function pick(item: ComboItem) {
     if (item.kind === "state") onPickState(item.id);
-    else onPickDistrict(item.id);
+    else onJumpDistrict(item.stateId, item.id);
     setQuery("");
     setOpen(false);
   }
@@ -418,7 +446,7 @@ function SearchCombobox({
       {open && items.length > 0 && (
         <ul className="combo-list" id="combo-listbox" role="listbox">
           {items.map((item) => (
-            <li key={`${item.kind}-${item.id}`} role="option" aria-selected={false}>
+            <li key={`${item.kind}-${item.stateId}-${item.id}`} role="option" aria-selected={false}>
               <button type="button" onClick={() => pick(item)}>
                 <span className={item.kind === "state" ? "combo-tag combo-tag-state" : "combo-tag"}>
                   {item.kind === "state" ? "◆" : "◉"}
@@ -444,6 +472,8 @@ export function RoadWatch() {
   });
   const [geoCache, setGeoCache] = useState<Record<string, GeoNames>>({});
   const [states, setStates] = useState<StateSummary[]>([]);
+  const [allDistricts, setAllDistricts] = useState<GlobalDistrict[]>([]);
+  const desiredDistrictRef = useRef<number | null>(null);
   const [stateId, setStateId] = useState(DEFAULT_STATE);
   const [districts, setDistricts] = useState<DistrictSummary[]>([]);
   const [districtCode, setDistrictCode] = useState(DEFAULT_DISTRICT);
@@ -486,6 +516,13 @@ export function RoadWatch() {
 
 
   useEffect(() => {
+    fetch(`${PUBLIC_BASE_PATH}/data/roads/districts-index.json`, { cache: "force-cache" })
+      .then((r) => (r.ok ? (r.json() as Promise<GlobalDistrict[]>) : Promise.reject(new Error("no index"))))
+      .then(setAllDistricts)
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     const id = window.setInterval(() => {
       if (document.visibilityState === "visible") setRefreshTick((tick) => tick + 1);
     }, 60_000);
@@ -518,10 +555,17 @@ export function RoadWatch() {
       })
       .then((registry) => {
         setDistricts(registry);
-        // After a state switch the previous district code may not exist here.
-        setDistrictCode((current) =>
-          registry.some((item) => item.code === current) ? current : registry[0]?.code ?? current,
-        );
+        const desired = desiredDistrictRef.current;
+        if (desired != null && registry.some((item) => item.code === desired)) {
+          desiredDistrictRef.current = null;
+          setDistrictCode(desired);
+          setSelectedId(null);
+        } else {
+          // After a state switch the previous district code may not exist here.
+          setDistrictCode((current) =>
+            registry.some((item) => item.code === current) ? current : registry[0]?.code ?? current,
+          );
+        }
       })
       .catch(() => {});
     return () => controller.abort();
@@ -616,6 +660,17 @@ export function RoadWatch() {
     setVisibleLimit(PAGE_SIZE);
   }
 
+  function jumpToDistrict(nextStateId: number, code: number) {
+    if (nextStateId !== stateId) {
+      desiredDistrictRef.current = code;
+      changeState(nextStateId);
+    } else {
+      setDistrictCode(code);
+      setSelectedId(null);
+      setVisibleLimit(PAGE_SIZE);
+    }
+  }
+
   function changeMode(nextMode: "projects" | "inventory") {
     setMode(nextMode);
     setRoadType("All road types");
@@ -672,15 +727,26 @@ export function RoadWatch() {
       <section className="command-bar" id="top" aria-label={t.districtSelection}>
         <div className="command-primary">
           <SearchCombobox
+            allDistricts={allDistricts}
             states={states}
-            districts={districts}
-            stateId={stateId}
             currentLabel={`${displayDistrictName} · ${translateState(states.find((x) => x.id === stateId)?.name ?? DEFAULT_STATE_NAME, nameLanguage, geoNames)}`}
             nameLanguage={nameLanguage}
             geoNames={geoNames}
+            onJumpDistrict={jumpToDistrict}
             onPickState={changeState}
-            onPickDistrict={setDistrictCode}
             placeholder={t.chooseDistrict}
+          />
+          <CompactSelect
+            label={t.chooseState}
+            value={stateId}
+            onChange={(v) => changeState(Number(v))}
+            options={states.map((item) => ({ value: item.id, label: translateState(item.name, nameLanguage, geoNames) }))}
+          />
+          <CompactSelect
+            label={t.chooseDistrict}
+            value={districtCode}
+            onChange={(v) => { setDistrictCode(Number(v)); setSelectedId(null); }}
+            options={districts.map((item) => ({ value: item.code, label: translateDistrict(item.name, nameLanguage, geoNames) }))}
           />
           <div className="command-snapshot">
             <span><strong>{formatNumber(districtSummary?.activeProjectCount ?? currentDataset?.ruralProjects.length ?? 0)}</strong> {t.activeRuralWorks}</span>
@@ -694,31 +760,7 @@ export function RoadWatch() {
         </div>
       </section>
 
-      <section className="tracker" aria-labelledby="tracker-title">
-        <div className="tracker-heading">
-          <div>
-            <p className="section-kicker">{displayDistrictName} {t.district}</p>
-            <h2 id="tracker-title">{t.roadProjectExplorer}</h2>
-          </div>
-          <div className="mode-switch" role="tablist" aria-label={t.roadDataView}>
-            <button type="button" role="tab" aria-selected={mode === "projects"} className={mode === "projects" ? "active" : ""} onClick={() => changeMode("projects")}>
-              {t.activeProjects} <span>{formatNumber(allProjects.length)}</span>
-            </button>
-            <button type="button" role="tab" aria-selected={mode === "inventory"} className={mode === "inventory" ? "active" : ""} onClick={() => changeMode("inventory")}>
-              {t.allRoadInventory} <span>{formatNumber(currentDataset?.inventory.length ?? 0)}</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="coverage-note">
-          <strong>{mode === "projects" ? t.investmentSignal : t.networkContext}</strong>
-          <span>
-            {mode === "projects"
-              ? t.projectCoverage
-              : t.inventoryCoverage}
-          </span>
-        </div>
-
+      <section className="tracker" aria-label={t.roadDataView}>
         {!loading && currentDataset.inventory.length === 0 && (
           <div className="source-gap-note">
             <strong>{t.legacyGap}</strong>
@@ -727,6 +769,14 @@ export function RoadWatch() {
         )}
 
         <div className="filter-panel">
+          <div className="mode-switch mode-switch-compact" role="tablist" aria-label={t.roadDataView}>
+            <button type="button" role="tab" aria-selected={mode === "projects"} className={mode === "projects" ? "active" : ""} onClick={() => changeMode("projects")}>
+              {t.activeProjects} <span>{formatNumber(allProjects.length)}</span>
+            </button>
+            <button type="button" role="tab" aria-selected={mode === "inventory"} className={mode === "inventory" ? "active" : ""} onClick={() => changeMode("inventory")}>
+              {t.allRoadInventory} <span>{formatNumber(currentDataset?.inventory.length ?? 0)}</span>
+            </button>
+          </div>
           <label className="search-field">
             <span>{t.search}</span>
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={mode === "projects" ? t.projectPlaceholder : t.inventoryPlaceholder} />

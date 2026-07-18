@@ -70,5 +70,137 @@
   "lng": 88.3697,
   "coordConfidence": "pincode",
   "geocoder": "pincode"
+ },
+ "b4b72f0b53ddb12d7654e2352c0c10c872c6bc86": {
+  "lat": 28.09,
+  "lng": 76.9567,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "f09078e57a022af8e9150ed2510d778cd793eb82": {
+  "lat": 31.1167,
+  "lng": 77.175,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "9f3502b33b41d4af4bc1c0f39cbd58ddce136349": {
+  "lat": 34.0694,
+  "lng": 74.8042,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "32e5d9661b26230eff30d67304c712837b4bad3a": {
+  "lat": 22.7583,
+  "lng": 85.3728,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "fa8d7b5e4690bb4fc32bb1b863670655d91b4da2": {
+  "lat": 9.9312,
+  "lng": 76.2673,
+  "coordConfidence": "district",
+  "geocoder": "district-centroid"
+ },
+ "cd6ca451d87c7525e46cd6820c676abaa3cd1edf": {
+  "lat": 17.7375,
+  "lng": 82.8347,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "a091a53e519e9607bc68b5e817648475a928b113": {
+  "lat": 24.8512,
+  "lng": 93.8464,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "44c9a40c23da3748e671f0031c8f3913bd339542": {
+  "lat": 25.4643,
+  "lng": 91.7571,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "9e6e60ce5466cccd339e983dec717e82f14ec0af": {
+  "lat": 23.75,
+  "lng": 92.75,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "c2585a924dfcca225f4ea0a107decb0748a2232b": {
+  "lat": 25.8583,
+  "lng": 94.2,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "c19e938a664fc5ceb33525a1937d89f60b98b5a3": {
+  "lat": 20.8413,
+  "lng": 85.8176,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "1fc88e79bc1af700d8941d795211c99d76cce761": {
+  "lat": 30.8676,
+  "lng": 75.8444,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "2485053e233d6f1eda079252363f22f44c69aa1d": {
+  "lat": 27.15,
+  "lng": 93.75,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "0560d4ca32fa51f373e68159f506821b90aff7e0": {
+  "lat": 27.3083,
+  "lng": 88.5583,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "3b906bb0c1691662abb6ae7bccef01794ff72d73": {
+  "lat": 13.0656,
+  "lng": 80.2672,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "ad59021534aa073689e2df8fd31e3a8878bf64aa": {
+  "lat": 23.6167,
+  "lng": 91.3667,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "e3a511bc11f9668ccdb0d1a5619240f7584553b4": {
+  "lat": 30.3333,
+  "lng": 78.0833,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "4d408c06a9e4cc67569a482fcfef74b6d1062753": {
+  "lat": 16.7024,
+  "lng": 78.1036,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "3b19dd8edc36a0d8693d81a37394b293f04d21ff": {
+  "lat": 34.5667,
+  "lng": 76.1,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "a78adc072e447345508646fe3f72c580e83584c5": {
+  "lat": 26.2546,
+  "lng": 91.5444,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
+ },
+ "92d5b20ea8325e58ba43dd056d8bf2c4edee4a33": {
+  "lat": 25.5941,
+  "lng": 85.1376,
+  "coordConfidence": "district",
+  "geocoder": "district-centroid"
+ },
+ "46328771dafa699ce3daed4c6c4edfd5dc5f05b1": {
+  "lat": 21.3244,
+  "lng": 81.9627,
+  "coordConfidence": "pincode",
+  "geocoder": "pincode"
  }
 }
