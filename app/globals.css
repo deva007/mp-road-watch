@@ -293,3 +293,58 @@ html[lang="hi"] .map-note { letter-spacing: .025em; text-transform: none; }
   .method-cards { grid-template-columns: 1fr; }
   .method-cards article, .method-cards article:nth-child(odd), .method-cards article:nth-child(even) { padding: 22px 0; border-right: 0; }
 }
+
+/* ---- Phase 2: map-first layout ---- */
+.command-bar {
+  width: min(1500px, calc(100% - 32px));
+  margin: 14px auto 10px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 20px; flex-wrap: wrap;
+}
+.command-primary { display: flex; align-items: center; gap: 16px; flex: 1 1 340px; min-width: 280px; }
+.combo {
+  position: relative; flex: 1 1 auto; max-width: 480px;
+  display: flex; align-items: center; height: 48px; padding: 0 14px;
+  background: #fff; border: 1px solid var(--line); border-radius: 13px;
+  box-shadow: 0 2px 12px rgba(29, 42, 36, .06);
+}
+.combo-icon { color: var(--muted); font-size: 18px; margin-right: 9px; }
+.combo-input { flex: 1; height: 100%; border: 0; outline: 0; background: transparent; font-size: 15px; color: var(--ink); font-family: inherit; }
+.combo-input::placeholder { color: #6d7a71; opacity: 1; }
+.combo-list {
+  position: absolute; top: 54px; left: 0; right: 0; z-index: 1500;
+  max-height: 360px; overflow-y: auto; margin: 0; padding: 6px; list-style: none;
+  background: #fff; border: 1px solid var(--line); border-radius: 13px;
+  box-shadow: 0 24px 60px rgba(29, 42, 36, .22);
+}
+.combo-list li { margin: 0; }
+.combo-list li button {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  border: 0; background: transparent; padding: 10px 11px; border-radius: 9px; cursor: pointer; text-align: left;
+}
+.combo-list li button:hover { background: #f1efe7; }
+.combo-tag { color: var(--orange); font-size: 11px; }
+.combo-tag-state { color: var(--green-deep); }
+.combo-label { font-size: 14px; font-weight: 600; color: var(--ink); }
+.combo-sub { margin-left: auto; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.command-snapshot { display: flex; gap: 18px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.command-snapshot strong { color: var(--ink); font-size: 15px; }
+.command-totals { display: flex; gap: 24px; }
+.command-totals span { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--muted); }
+.command-totals strong { font-family: var(--font-display), serif; font-size: 22px; font-weight: 400; color: var(--ink); }
+
+/* Map becomes the hero: dominant width + tall */
+.workspace { grid-template-columns: minmax(320px, .42fr) minmax(0, 1.75fr); min-height: 76vh; }
+.map-column { height: 76vh; }
+.project-column { height: 76vh; }
+
+@media (max-width: 820px) {
+  .command-bar { width: calc(100% - 32px); flex-direction: column; align-items: stretch; gap: 12px; }
+  .command-primary { flex-wrap: wrap; }
+  .combo { max-width: none; }
+  .command-totals { justify-content: space-between; }
+  /* Map hero on mobile: top, ~62vh; list below */
+  .workspace { min-height: 0; }
+  .map-column { height: 62vh; order: 1; }
+  .project-column { height: auto; max-height: 70vh; order: 2; }
+}

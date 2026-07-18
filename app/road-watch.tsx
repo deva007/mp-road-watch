@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import type { LayerGroup, Map as LeafletMap } from "leaflet";
 import {
   majorProjectNotesHi,
@@ -336,6 +336,104 @@ function RoadMap({
   return <div ref={containerRef} className="map-canvas" aria-label={translations[language].mapLabel} />;
 }
 
+type ComboItem = { kind: "state" | "district"; id: number; label: string; sub: string };
+
+function SearchCombobox({
+  states,
+  districts,
+  stateId,
+  currentLabel,
+  nameLanguage,
+  geoNames,
+  onPickState,
+  onPickDistrict,
+  placeholder,
+}: {
+  states: StateSummary[];
+  districts: DistrictSummary[];
+  stateId: number;
+  currentLabel: string;
+  nameLanguage: NameLanguage;
+  geoNames: GeoNames | null;
+  onPickState: (id: number) => void;
+  onPickDistrict: (code: number) => void;
+  placeholder: string;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const stateName = states.find((item) => item.id === stateId)?.name ?? "";
+
+  useEffect(() => {
+    function onDocClick(event: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(event.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  const items = useMemo<ComboItem[]>(() => {
+    const q = query.trim().toLowerCase();
+    const districtItems: ComboItem[] = districts.map((d) => ({
+      kind: "district",
+      id: d.code,
+      label: translateDistrict(d.name, nameLanguage, geoNames),
+      sub: translateState(stateName, nameLanguage, geoNames),
+    }));
+    const stateItems: ComboItem[] = states.map((sState) => ({
+      kind: "state",
+      id: sState.id,
+      label: translateState(sState.name, nameLanguage, geoNames),
+      sub: "State / UT",
+    }));
+    const all = [...districtItems, ...stateItems];
+    const filtered = q
+      ? all.filter((it) => it.label.toLowerCase().includes(q) || it.sub.toLowerCase().includes(q))
+      : districtItems;
+    return filtered.slice(0, 40);
+  }, [query, districts, states, stateName, nameLanguage, geoNames]);
+
+  function pick(item: ComboItem) {
+    if (item.kind === "state") onPickState(item.id);
+    else onPickDistrict(item.id);
+    setQuery("");
+    setOpen(false);
+  }
+
+  return (
+    <div className="combo" ref={wrapRef}>
+      <span className="combo-icon" aria-hidden="true">⌕</span>
+      <input
+        className="combo-input"
+        value={query}
+        placeholder={open ? placeholder : currentLabel}
+        onFocus={() => setOpen(true)}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+        onKeyDown={(e) => { if (e.key === "Enter" && items[0]) pick(items[0]); if (e.key === "Escape") setOpen(false); }}
+        aria-label={placeholder}
+        aria-expanded={open}
+        role="combobox"
+        aria-controls="combo-listbox"
+      />
+      {open && items.length > 0 && (
+        <ul className="combo-list" id="combo-listbox" role="listbox">
+          {items.map((item) => (
+            <li key={`${item.kind}-${item.id}`} role="option" aria-selected={false}>
+              <button type="button" onClick={() => pick(item)}>
+                <span className={item.kind === "state" ? "combo-tag combo-tag-state" : "combo-tag"}>
+                  {item.kind === "state" ? "◆" : "◉"}
+                </span>
+                <span className="combo-label">{item.label}</span>
+                <span className="combo-sub">{item.sub}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function RoadWatch() {
   // "regional" resolves to the selected state's own language when a locale
   // file for it has shipped; otherwise names fall back to English.
@@ -566,49 +664,33 @@ export function RoadWatch() {
             )}
           </div>
           {checkedLabel && <span className="update-stamp"><i /> {t.dataChecked} {checkedLabel}</span>}
+          <a className="header-link" href={`${PUBLIC_BASE_PATH}/auctions`}>{language === "hi" ? "बैंक नीलामी" : "Bank auctions"} <span>↗</span></a>
           <a className="header-link" href="#methodology">{t.sourcesCautions} <span>↗</span></a>
         </div>
       </header>
 
-      <section className="hero" id="top">
-        <div className="hero-copy">
-          <p className="eyebrow"><span /> {t.eyebrow}</p>
-          <h1>{t.headlineLead}<br /><em>{t.headlineAccent}</em></h1>
-          <p className="hero-intro">{t.heroIntro}</p>
+      <section className="command-bar" id="top" aria-label={t.districtSelection}>
+        <div className="command-primary">
+          <SearchCombobox
+            states={states}
+            districts={districts}
+            stateId={stateId}
+            currentLabel={`${displayDistrictName} · ${translateState(states.find((x) => x.id === stateId)?.name ?? DEFAULT_STATE_NAME, nameLanguage, geoNames)}`}
+            nameLanguage={nameLanguage}
+            geoNames={geoNames}
+            onPickState={changeState}
+            onPickDistrict={setDistrictCode}
+            placeholder={t.chooseDistrict}
+          />
+          <div className="command-snapshot">
+            <span><strong>{formatNumber(districtSummary?.activeProjectCount ?? currentDataset?.ruralProjects.length ?? 0)}</strong> {t.activeRuralWorks}</span>
+            <span><strong>{formatNumber(districtSummary?.inventoryCount ?? currentDataset?.inventory.length ?? 0)}</strong> {t.roadsInInventory}</span>
+          </div>
         </div>
-        <div className="hero-stats" aria-label={t.datasetSummary}>
-          <div><strong>{districts.length ? formatNumber(totalInventory) : "…"}</strong><span>{t.mappedRoadRecords}</span></div>
-          <div><strong>{districts.length ? formatNumber(totalProjects) : "…"}</strong><span>{t.activePmgsWorks}</span></div>
-          <div><strong>{districts.length ? formatNumber(districts.length) : "…"}</strong><span>{t.districtReports}</span></div>
-        </div>
-      </section>
-
-      <section className="district-ribbon" aria-label={t.districtSelection}>
-        <div>
-          <span className="district-step">01</span>
-          <label htmlFor="state-select">{t.chooseState}</label>
-        </div>
-        <div className="district-select-wrap state-select-wrap">
-          <select id="state-select" value={stateId} onChange={(event) => changeState(Number(event.target.value))}>
-            {states.length === 0 && <option value={DEFAULT_STATE}>{translateState(DEFAULT_STATE_NAME, nameLanguage, geoNames)}</option>}
-            {states.map((item) => <option key={item.id} value={item.id}>{translateState(item.name, nameLanguage, geoNames)}</option>)}
-          </select>
-          <span aria-hidden="true">↓</span>
-        </div>
-        <div>
-          <span className="district-step">02</span>
-          <label htmlFor="district-select">{t.chooseDistrict}</label>
-        </div>
-        <div className="district-select-wrap">
-          <select id="district-select" value={districtCode} onChange={(event) => setDistrictCode(Number(event.target.value))}>
-            {districts.length === 0 && <option value={DEFAULT_DISTRICT}>{translateDistrict("Bhopal", nameLanguage, geoNames)}</option>}
-            {districts.map((item) => <option key={item.code} value={item.code}>{translateDistrict(item.name, nameLanguage, geoNames)}</option>)}
-          </select>
-          <span aria-hidden="true">↓</span>
-        </div>
-        <div className="district-snapshot">
-          <span><strong>{formatNumber(districtSummary?.activeProjectCount ?? currentDataset?.ruralProjects.length ?? 0)}</strong> {t.activeRuralWorks}</span>
-          <span><strong>{formatNumber(districtSummary?.inventoryCount ?? currentDataset?.inventory.length ?? 0)}</strong> {t.roadsInInventory}</span>
+        <div className="command-totals" aria-label={t.datasetSummary}>
+          <span><strong>{districts.length ? formatNumber(totalInventory) : "…"}</strong>{t.mappedRoadRecords}</span>
+          <span><strong>{districts.length ? formatNumber(totalProjects) : "…"}</strong>{t.activePmgsWorks}</span>
+          <span><strong>{districts.length ? formatNumber(districts.length) : "…"}</strong>{t.districtReports}</span>
         </div>
       </section>
 

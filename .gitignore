@@ -45,3 +45,4 @@ next-env.d.ts
 
 # python bytecode
 __pycache__/
+tsconfig.tsbuildinfo
