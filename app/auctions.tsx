@@ -60,6 +60,7 @@ const STRINGS = {
     openNotice: "Open official notice",
     roadsNear: "Explore road connectivity",
     directions: "Get directions",
+    ddPack: "Due-diligence pack",
     noResults: "No listings match these filters.",
     results: "listings",
     sampleBanner:
@@ -90,6 +91,7 @@ const STRINGS = {
     openNotice: "आधिकारिक सूचना खोलें",
     roadsNear: "सड़क कनेक्टिविटी देखें",
     directions: "रास्ता पाएं",
+    ddPack: "ड्यू-डिलिजेंस पैक",
     noResults: "इन फ़िल्टरों से कोई सूची मेल नहीं खाती।",
     results: "सूचियाँ",
     sampleBanner:
@@ -405,6 +407,9 @@ export function AuctionWatch() {
                         {t.openNotice} ↗
                       </a>
                     )}
+                    <a href={`${PUBLIC_BASE_PATH}/due-diligence?id=${encodeURIComponent(l.id)}&state=${l.stateId}`} style={linkStyle} onClick={(e) => e.stopPropagation()}>
+                      {t.ddPack} →
+                    </a>
                     <a href={directionsUrl(l)} target="_blank" rel="noopener noreferrer" style={linkStyle} onClick={(e) => e.stopPropagation()}>
                       {t.directions} ↗
                     </a>

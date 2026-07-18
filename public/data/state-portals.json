@@ -1,0 +1,26 @@
+{
+  "national": {
+    "ecourts": { "label": "eCourts case search", "url": "https://services.ecourts.gov.in/ecourtindia_v6/" },
+    "njdg": { "label": "National Judicial Data Grid", "url": "https://njdg.ecourts.gov.in/" },
+    "cersai": { "label": "CERSAI security-interest search", "url": "https://www.cersai.org.in/" },
+    "baanknet": { "label": "BAANKNET auction portal", "url": "https://baanknet.com/" }
+  },
+  "states": {
+    "20": { "landRecords": { "label": "MP Bhulekh (खसरा/खतौनी)", "url": "https://mpbhulekh.gov.in/" }, "registration": { "label": "MP IGR (circle rates / registry)", "url": "https://mpigr.gov.in/" }, "rera": { "label": "RERA MP", "url": "https://rera.mp.gov.in/" } },
+    "21": { "landRecords": { "label": "MahaBhumi (7/12 उतारा)", "url": "https://bhulekh.mahabhumi.gov.in/" }, "registration": { "label": "IGR Maharashtra (ready reckoner)", "url": "https://igrmaharashtra.gov.in/" }, "rera": { "label": "MahaRERA", "url": "https://maharera.maharashtra.gov.in/" } },
+    "17": { "landRecords": { "label": "Bhoomi Karnataka (RTC)", "url": "https://landrecords.karnataka.gov.in/" }, "registration": { "label": "Kaveri Online (guidance value)", "url": "https://kaverionline.karnataka.gov.in/" }, "rera": { "label": "RERA Karnataka", "url": "https://rera.karnataka.gov.in/" } },
+    "33": { "landRecords": { "label": "UP Bhulekh", "url": "https://upbhulekh.gov.in/" }, "registration": { "label": "IGRS UP (circle rates)", "url": "https://igrsup.gov.in/" }, "rera": { "label": "UP RERA", "url": "https://www.up-rera.in/" } },
+    "10": { "landRecords": { "label": "Delhi Land Records (Bhulekh)", "url": "https://dlrc.delhi.gov.in/" }, "registration": { "label": "Delhi DORIS (registry)", "url": "https://doris.delhi.gov.in/" }, "rera": { "label": "RERA Delhi", "url": "https://rera.delhi.gov.in/" } },
+    "31": { "landRecords": { "label": "TN Patta/Chitta (eServices)", "url": "https://eservices.tn.gov.in/" }, "registration": { "label": "TNREGINET (guideline value)", "url": "https://tnreginet.gov.in/" }, "rera": { "label": "TN RERA", "url": "https://rera.tn.gov.in/" } },
+    "12": { "landRecords": { "label": "AnyROR Gujarat (7/12)", "url": "https://anyror.gujarat.gov.in/" }, "registration": { "label": "Garvi (jantri rates)", "url": "https://garvi.gujarat.gov.in/" }, "rera": { "label": "GujRERA", "url": "https://gujrera.gujarat.gov.in/" } },
+    "35": { "landRecords": { "label": "Banglarbhumi (RoR)", "url": "https://banglarbhumi.gov.in/" }, "registration": { "label": "WB Registration (market value)", "url": "https://wbregistration.gov.in/" }, "rera": { "label": "WB HIRA/RERA", "url": "https://rera.wb.gov.in/" } },
+    "29": { "landRecords": { "label": "Apna Khata Rajasthan", "url": "https://apnakhata.rajasthan.gov.in/" }, "registration": { "label": "ePanjiyan (DLC rates)", "url": "https://epanjiyan.rajasthan.gov.in/" }, "rera": { "label": "RERA Rajasthan", "url": "https://rera.rajasthan.gov.in/" } },
+    "5": { "landRecords": { "label": "Bihar Bhumi", "url": "https://biharbhumi.bihar.gov.in/" }, "registration": { "label": "Bhumi Jankari (MVR)", "url": "https://bhumijankari.bihar.gov.in/" }, "rera": { "label": "RERA Bihar", "url": "https://rera.bihar.gov.in/" } },
+    "28": { "landRecords": { "label": "Jamabandi Punjab", "url": "https://jamabandi.punjab.gov.in/" }, "registration": { "label": "Punjab Registration (collector rates)", "url": "https://igrpunjab.gov.in/" }, "rera": { "label": "RERA Punjab", "url": "https://rera.punjab.gov.in/" } },
+    "13": { "landRecords": { "label": "Jamabandi Haryana", "url": "https://jamabandi.nic.in/" }, "registration": { "label": "Haryana Registration (collector rates)", "url": "https://jamabandi.nic.in/property/registration" }, "rera": { "label": "Haryana RERA", "url": "https://haryanarera.gov.in/" } },
+    "36": { "landRecords": { "label": "Dharani Telangana", "url": "https://dharani.telangana.gov.in/" }, "registration": { "label": "Telangana Registration (market value)", "url": "https://registration.telangana.gov.in/" }, "rera": { "label": "TS RERA", "url": "https://rera.telangana.gov.in/" } },
+    "2": { "landRecords": { "label": "Mee Bhoomi AP (1-B/Adangal)", "url": "https://meebhoomi.ap.gov.in/" }, "registration": { "label": "AP Registration (market value)", "url": "https://registration.ap.gov.in/" }, "rera": { "label": "AP RERA", "url": "https://rera.ap.gov.in/" } },
+    "18": { "landRecords": { "label": "e-Rekha Kerala (survey records)", "url": "https://erekha.kerala.gov.in/" }, "registration": { "label": "Kerala Registration (fair value)", "url": "https://igr.kerala.gov.in/" }, "rera": { "label": "K-RERA", "url": "https://rera.kerala.gov.in/" } },
+    "26": { "landRecords": { "label": "Bhulekh Odisha (RoR)", "url": "https://bhulekh.ori.nic.in/" }, "registration": { "label": "IGR Odisha (benchmark value)", "url": "https://igrodisha.gov.in/" }, "rera": { "label": "RERA Odisha", "url": "https://rera.odisha.gov.in/" } }
+  }
+}
