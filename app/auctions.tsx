@@ -257,15 +257,14 @@ export function AuctionWatch() {
 
   useEffect(() => {
     if (!index) return;
-    const wanted = stateFilter === "all" ? index.states.map((s) => s.id) : [stateFilter];
-    wanted.forEach((id) => {
-      if (listingsByState[id]) return;
-      fetch(`${PUBLIC_BASE_PATH}/data/auctions/${id}/listings.json`, { cache: "no-cache" })
+    index.states.forEach((s) => {
+      if (listingsByState[s.id]) return;
+      fetch(`${PUBLIC_BASE_PATH}/data/auctions/${s.id}/listings.json`, { cache: "no-cache" })
         .then((r) => (r.ok ? (r.json() as Promise<Listing[]>) : Promise.reject(new Error("no listings"))))
-        .then((rows) => setListingsByState((prev) => ({ ...prev, [id]: rows })))
+        .then((rows) => setListingsByState((prev) => ({ ...prev, [s.id]: rows })))
         .catch(() => {});
     });
-  }, [index, stateFilter, listingsByState]);
+  }, [index, listingsByState]);
 
   const allLoaded = useMemo(() => Object.values(listingsByState).flat(), [listingsByState]);
 
@@ -309,10 +308,6 @@ export function AuctionWatch() {
           <button type="button" onClick={toggleLanguage} style={btnStyle}>{t.lang}</button>
         </div>
       </header>
-
-      {index?.sample && (
-        <div style={bannerStyle} role="status">⚠ {t.sampleBanner}</div>
-      )}
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, margin: "18px 0" }}>
         <label style={fieldStyle}>
@@ -433,12 +428,3 @@ const fieldStyle: React.CSSProperties = { display: "flex", flexDirection: "colum
 const labelStyle: React.CSSProperties = { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.4, color: "#6a746e" };
 const selectStyle: React.CSSProperties = { padding: "8px 10px", borderRadius: 8, border: "1px solid #cdd4ce", background: "#fff", fontSize: 14 };
 const linkStyle: React.CSSProperties = { fontSize: 13, color: "#214f42", fontWeight: 600, textDecoration: "none" };
-const bannerStyle: React.CSSProperties = {
-  marginTop: 16,
-  padding: "10px 14px",
-  borderRadius: 10,
-  background: "#fff5e6",
-  border: "1px solid #f0d8a8",
-  color: "#7a5a12",
-  fontSize: 13.5,
-};

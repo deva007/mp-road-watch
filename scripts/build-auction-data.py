@@ -160,6 +160,10 @@ def sample_records() -> list[dict]:
         ("Madhya Pradesh", "Bhopal", (23.2599, 77.4126), "Punjab National Bank", "Commercial", 9500000, 20, "462001"),
         ("Karnataka", "Belagavi", (15.8497, 74.4977), "Canara Bank", "Plot / land", 2900000, 11, "590001"),
         ("Bihar", "Gaya", (24.7955, 85.0002), "State Bank of India", "Residential", 3200000, 22, "823001"),
+        ("Delhi", "New Delhi", (28.6139, 77.2090), "State Bank of India", "Commercial", 32000000, 9, "110001"),
+        ("Delhi", "Dwarka", (28.5921, 77.0460), "Punjab National Bank", "Residential", 18500000, 16, "110075"),
+        ("Haryana", "Faridabad", (28.4089, 77.3178), "HDFC Bank", "Residential", 11500000, 13, "121001"),
+        ("Uttar Pradesh", "Ghaziabad", (28.6692, 77.4538), "Bank of Baroda", "Commercial", 16800000, 19, "201001"),
     ]
     records = []
     for index, (state, district, (lat, lng), bank, ptype, reserve, days_out, pincode) in enumerate(seeds, start=1):
