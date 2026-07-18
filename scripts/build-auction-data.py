@@ -164,6 +164,16 @@ def sample_records() -> list[dict]:
         ("Delhi", "Dwarka", (28.5921, 77.0460), "Punjab National Bank", "Residential", 18500000, 16, "110075"),
         ("Haryana", "Faridabad", (28.4089, 77.3178), "HDFC Bank", "Residential", 11500000, 13, "121001"),
         ("Uttar Pradesh", "Ghaziabad", (28.6692, 77.4538), "Bank of Baroda", "Commercial", 16800000, 19, "201001"),
+        ("Karnataka", "Kalaburagi", (17.3297, 76.8343), "State Bank of India", "Agricultural land", 2600000, 21, "585101"),
+        ("Andhra Pradesh", "Krishna", (16.5062, 80.6480), "Union Bank of India", "Residential", 4800000, 14, "520001"),
+        ("Kerala", "Kozhikode", (11.2588, 75.7804), "Federal Bank", "Residential", 6300000, 12, "673001"),
+        ("Gujarat", "Rajkot", (22.3039, 70.8022), "Bank of Baroda", "Plot / land", 4100000, 23, "360001"),
+        ("Tamil Nadu", "Madurai", (9.9252, 78.1198), "Indian Bank", "Residential", 3600000, 17, "625001"),
+        ("Uttar Pradesh", "Varanasi", (25.3176, 82.9739), "Bank of India", "Commercial", 8900000, 25, "221001"),
+        ("Maharashtra", "Nagpur", (21.1458, 79.0882), "Union Bank of India", "Industrial", 15800000, 9, "440001"),
+        ("Punjab", "Amritsar", (31.6340, 74.8723), "Punjab National Bank", "Commercial", 7600000, 20, "143001"),
+        ("Rajasthan", "Udaipur", (24.5854, 73.7125), "Bank of Baroda", "Residential", 5200000, 28, "313001"),
+        ("West Bengal", "Siliguri", (26.7271, 88.3953), "UCO Bank", "Commercial", 6800000, 15, "734001"),
     ]
     records = []
     for index, (state, district, (lat, lng), bank, ptype, reserve, days_out, pincode) in enumerate(seeds, start=1):

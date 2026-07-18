@@ -655,8 +655,6 @@ export function RoadWatch() {
   const modeCount = mode === "projects" ? filteredProjects.length : filteredInventory.length;
   const hasFilters = stage !== "All stages" || roadType !== "All road types" || search.length > 0;
   const loading = !currentDataset;
-  const totalInventory = districts.reduce((sum, item) => sum + item.inventoryCount, 0);
-  const totalProjects = districts.reduce((sum, item) => sum + item.activeProjectCount, 0);
   const checkedDate = dataCheckedAt ? new Date(dataCheckedAt) : null;
   const checkedLabel = checkedDate && !Number.isNaN(checkedDate.getTime())
     ? checkedDate.toDateString() === new Date().toDateString()
@@ -758,15 +756,6 @@ export function RoadWatch() {
             onChange={(v) => { setDistrictCode(Number(v)); setSelectedId(null); }}
             options={districts.map((item) => ({ value: item.code, label: translateDistrict(item.name, nameLanguage, geoNames) }))}
           />
-          <div className="command-snapshot">
-            <span><strong>{formatNumber(districtSummary?.activeProjectCount ?? currentDataset?.ruralProjects.length ?? 0)}</strong> {t.activeRuralWorks}</span>
-            <span><strong>{formatNumber(districtSummary?.inventoryCount ?? currentDataset?.inventory.length ?? 0)}</strong> {t.roadsInInventory}</span>
-          </div>
-        </div>
-        <div className="command-totals" aria-label={t.datasetSummary}>
-          <span><strong>{districts.length ? formatNumber(totalInventory) : "…"}</strong>{t.mappedRoadRecords}</span>
-          <span><strong>{districts.length ? formatNumber(totalProjects) : "…"}</strong>{t.activePmgsWorks}</span>
-          <span><strong>{districts.length ? formatNumber(districts.length) : "…"}</strong>{t.districtReports}</span>
         </div>
       </section>
 

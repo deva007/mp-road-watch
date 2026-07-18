@@ -259,7 +259,7 @@ export type NameLanguage = "en" | "hi" | (string & {});
 
 // Regional locales with a shipped geo file. Update when adding a language;
 // scripts/validate-locales.py cross-checks this list against public/locales/.
-export const AVAILABLE_REGIONAL_LOCALES: readonly string[] = ["kn", "ta", "bn"];
+export const AVAILABLE_REGIONAL_LOCALES: readonly string[] = ["kn", "ta", "bn", "mr", "gu", "te"];
 
 export function translateState(name: string, language: NameLanguage, geo: GeoNames | null): string {
   if (language === "en" || !geo) return name;
