@@ -210,6 +210,8 @@ function districtMajorProjects(districtName: string, language: Language, nameLan
     }));
 }
 
+type AuctionPin = { id: string; lat: number; lng: number; label: string; url: string };
+
 function RoadMap({
   features,
   selectedFeature,
@@ -217,6 +219,7 @@ function RoadMap({
   mode,
   language,
   onSelect,
+  auctions,
 }: {
   features: MapFeature[];
   selectedFeature: MapFeature | undefined;
@@ -224,6 +227,7 @@ function RoadMap({
   mode: "projects" | "inventory";
   language: Language;
   onSelect: (id: string) => void;
+  auctions: AuctionPin[];
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
@@ -327,11 +331,24 @@ function RoadMap({
           map.setView(districtCenter, 9);
         }
       }
+
+      // Auction overlay (unified map): distressed properties on top of roads.
+      auctions.forEach((pin) => {
+        const marker = L.circleMarker([pin.lat, pin.lng], {
+          radius: 8,
+          color: "#fffdf7",
+          weight: 2,
+          fillColor: "#d96f38",
+          fillOpacity: 0.95,
+        }).addTo(layer);
+        marker.bindTooltip(pin.label, { direction: "top" });
+        marker.on("click", () => window.open(pin.url, "_blank", "noopener"));
+      });
     });
     return () => {
       cancelled = true;
     };
-  }, [districtCenter, features, language, mode, onSelect, selectedFeature]);
+  }, [districtCenter, features, language, mode, onSelect, selectedFeature, auctions]);
 
   return <div ref={containerRef} className="map-canvas" aria-label={translations[language].mapLabel} />;
 }
@@ -493,6 +510,8 @@ export function RoadWatch() {
   const [roadType, setRoadType] = useState("All road types");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showAuctions, setShowAuctions] = useState(false);
+  const [stateAuctions, setStateAuctions] = useState<AuctionPin[]>([]);
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
   const [dataCheckedAt, setDataCheckedAt] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
@@ -604,6 +623,28 @@ export function RoadWatch() {
       });
     return () => controller.abort();
   }, [stateId, districtCode, refreshTick]);
+
+  useEffect(() => {
+    if (!showAuctions) return;
+    let cancelled = false;
+    fetch(`${PUBLIC_BASE_PATH}/data/auctions/${stateId}/listings.json`, { cache: "no-cache" })
+      .then((r) => (r.ok ? (r.json() as Promise<Array<{ id: string; lat: number | null; lng: number | null; title: string; reservePrice: number; noticeUrl: string }>>) : Promise.reject(new Error("none"))))
+      .then((rows) => {
+        if (cancelled) return;
+        const pins: AuctionPin[] = rows
+          .filter((r) => r.lat != null && r.lng != null)
+          .map((r) => ({
+            id: r.id,
+            lat: r.lat as number,
+            lng: r.lng as number,
+            label: `${r.title} · ₹${(r.reservePrice / 100000).toFixed(1)}L`,
+            url: r.noticeUrl,
+          }));
+        setStateAuctions(pins);
+      })
+      .catch(() => { if (!cancelled) setStateAuctions([]); });
+    return () => { cancelled = true; };
+  }, [showAuctions, stateId]);
 
   const districtSummary = districts.find((item) => item.code === districtCode);
   const currentDataset = dataset?.district.code === districtCode ? dataset : null;
@@ -768,14 +809,6 @@ export function RoadWatch() {
         )}
 
         <div className="filter-panel">
-          <div className="mode-switch mode-switch-compact" role="tablist" aria-label={t.roadDataView}>
-            <button type="button" role="tab" aria-selected={mode === "projects"} className={mode === "projects" ? "active" : ""} onClick={() => changeMode("projects")}>
-              {t.activeProjects} <span>{formatNumber(allProjects.length)}</span>
-            </button>
-            <button type="button" role="tab" aria-selected={mode === "inventory"} className={mode === "inventory" ? "active" : ""} onClick={() => changeMode("inventory")}>
-              {t.allRoadInventory} <span>{formatNumber(currentDataset?.inventory.length ?? 0)}</span>
-            </button>
-          </div>
           <label className="search-field">
             <span>{t.search}</span>
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={mode === "projects" ? t.projectPlaceholder : t.inventoryPlaceholder} />
@@ -884,7 +917,18 @@ export function RoadWatch() {
               mode={mode}
               language={language}
               onSelect={setSelectedId}
+              auctions={showAuctions ? stateAuctions : []}
             />
+            <div className="map-layers">
+              <button
+                type="button"
+                className={showAuctions ? "layer-chip active" : "layer-chip"}
+                aria-pressed={showAuctions}
+                onClick={() => setShowAuctions((v) => !v)}
+              >
+                <i /> {language === "hi" ? "बैंक नीलामी" : "Bank auctions"}{showAuctions && stateAuctions.length ? ` · ${stateAuctions.length}` : ""}
+              </button>
+            </div>
             <div className="map-overlay map-title">
               <span>{mode === "projects" ? t.selectedProject : t.selectedInventoryRoad}</span>
               <strong>{mode === "projects" ? selectedProject?.name ?? `${displayDistrictName} ${t.district}` : selectedRoad?.name ?? `${displayDistrictName} ${t.district}`}</strong>

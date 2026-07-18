@@ -59,6 +59,7 @@ const STRINGS = {
     auctionOn: "Auction",
     openNotice: "Open official notice",
     roadsNear: "Explore road connectivity",
+    directions: "Get directions",
     noResults: "No listings match these filters.",
     results: "listings",
     sampleBanner:
@@ -88,6 +89,7 @@ const STRINGS = {
     auctionOn: "नीलामी",
     openNotice: "आधिकारिक सूचना खोलें",
     roadsNear: "सड़क कनेक्टिविटी देखें",
+    directions: "रास्ता पाएं",
     noResults: "इन फ़िल्टरों से कोई सूची मेल नहीं खाती।",
     results: "सूचियाँ",
     sampleBanner:
@@ -246,6 +248,14 @@ export function AuctionWatch() {
       .catch(() => {});
   }, []);
 
+  function directionsUrl(l: Listing): string {
+    if (l.lat != null && l.lng != null && PRECISE_CONFIDENCE.has(l.coordConfidence)) {
+      return `https://www.google.com/maps/dir/?api=1&destination=${l.lat},${l.lng}`;
+    }
+    const q = encodeURIComponent(l.address || `${l.district}`);
+    return `https://www.google.com/maps/search/?api=1&query=${q}`;
+  }
+
   function roadLink(l: Listing): string {
     const base = `${PUBLIC_BASE_PATH}/`;
     const match = districtIndex.find(
@@ -395,6 +405,9 @@ export function AuctionWatch() {
                         {t.openNotice} ↗
                       </a>
                     )}
+                    <a href={directionsUrl(l)} target="_blank" rel="noopener noreferrer" style={linkStyle} onClick={(e) => e.stopPropagation()}>
+                      {t.directions} ↗
+                    </a>
                     <a href={roadLink(l)} style={linkStyle} onClick={(e) => e.stopPropagation()}>
                       {t.roadsNear} →
                     </a>
