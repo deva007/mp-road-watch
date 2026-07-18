@@ -228,6 +228,7 @@ export function AuctionWatch() {
   const [maxPrice, setMaxPrice] = useState<number | "all">("all");
   const [maxDays, setMaxDays] = useState<number | "all">("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [districtIndex, setDistrictIndex] = useState<{ code: number; name: string; stateId: number }[]>([]);
 
   const t = STRINGS[language];
 
@@ -237,6 +238,22 @@ export function AuctionWatch() {
       .then(setIndex)
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    fetch(`${PUBLIC_BASE_PATH}/data/roads/districts-index.json`, { cache: "force-cache" })
+      .then((r) => (r.ok ? (r.json() as Promise<{ code: number; name: string; stateId: number }[]>) : Promise.reject(new Error("no idx"))))
+      .then(setDistrictIndex)
+      .catch(() => {});
+  }, []);
+
+  function roadLink(l: Listing): string {
+    const base = `${PUBLIC_BASE_PATH}/`;
+    const match = districtIndex.find(
+      (d) => d.stateId === l.stateId && d.name.toLowerCase() === l.district.toLowerCase(),
+    );
+    if (match) return `${base}?state=${l.stateId}&district=${match.code}`;
+    return `${base}?state=${l.stateId}`;
+  }
 
   useEffect(() => {
     if (!index) return;
@@ -383,7 +400,7 @@ export function AuctionWatch() {
                         {t.openNotice} ↗
                       </a>
                     )}
-                    <a href={`${PUBLIC_BASE_PATH}/`} style={linkStyle} onClick={(e) => e.stopPropagation()}>
+                    <a href={roadLink(l)} style={linkStyle} onClick={(e) => e.stopPropagation()}>
                       {t.roadsNear} →
                     </a>
                   </div>

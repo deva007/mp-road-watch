@@ -473,8 +473,18 @@ export function RoadWatch() {
   const [geoCache, setGeoCache] = useState<Record<string, GeoNames>>({});
   const [states, setStates] = useState<StateSummary[]>([]);
   const [allDistricts, setAllDistricts] = useState<GlobalDistrict[]>([]);
-  const desiredDistrictRef = useRef<number | null>(null);
-  const [stateId, setStateId] = useState(DEFAULT_STATE);
+  const desiredDistrictRef = useRef<number | null>(
+    typeof window !== "undefined" && Number(new URLSearchParams(window.location.search).get("district"))
+      ? Number(new URLSearchParams(window.location.search).get("district"))
+      : null,
+  );
+  const [stateId, setStateId] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const sid = Number(new URLSearchParams(window.location.search).get("state"));
+      if (sid) return sid;
+    }
+    return DEFAULT_STATE;
+  });
   const [districts, setDistricts] = useState<DistrictSummary[]>([]);
   const [districtCode, setDistrictCode] = useState(DEFAULT_DISTRICT);
   const [dataset, setDataset] = useState<DistrictDataset | null>(null);

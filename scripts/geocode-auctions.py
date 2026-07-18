@@ -137,7 +137,19 @@ def geocode_pincode(listing: dict, pincodes: dict) -> dict | None:
     return None
 
 
+PRECISE = {"rooftop", "street", "locality"}
+
+
 def resolve(listing: dict, pincodes: dict, cache: dict, token: str | None) -> dict:
+    # If the build already gave a precise, real coordinate, keep it — don't
+    # downgrade to a pincode/district centroid.
+    if listing.get("lat") is not None and listing.get("lng") is not None and listing.get("coordConfidence") in PRECISE:
+        return {
+            "lat": listing["lat"],
+            "lng": listing["lng"],
+            "coordConfidence": listing["coordConfidence"],
+            "geocoder": "prebuilt",
+        }
     key = address_key(listing)
     if key in cache:
         return cache[key]

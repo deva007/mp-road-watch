@@ -148,6 +148,18 @@ def sample_records() -> list[dict]:
         ("West Bengal", "Kolkata", (22.5726, 88.3639), "UCO Bank", "Commercial", 8700000, 11, "700001"),
         ("Telangana", "Hyderabad", (17.3850, 78.4867), "State Bank of India", "Commercial", 11200000, 15, "500001"),
         ("Ladakh", "Leh", (34.1526, 77.5771), "State Bank of India", "Plot / land", 3900000, 34, "194101"),
+        ("Maharashtra", "Mumbai Suburban", (19.0760, 72.8777), "HDFC Bank", "Residential", 24500000, 7, "400001"),
+        ("Maharashtra", "Nashik", (19.9975, 73.7898), "Bank of Maharashtra", "Plot / land", 4900000, 20, "422001"),
+        ("Karnataka", "Mysuru", (12.2958, 76.6394), "Canara Bank", "Residential", 3900000, 13, "570001"),
+        ("Tamil Nadu", "Coimbatore", (11.0168, 76.9558), "Indian Overseas Bank", "Industrial", 14200000, 24, "641001"),
+        ("Uttar Pradesh", "Gautam Buddha Nagar", (28.5355, 77.3910), "Punjab National Bank", "Commercial", 21000000, 6, "201301"),
+        ("Gujarat", "Surat", (21.1702, 72.8311), "Bank of Baroda", "Commercial", 10800000, 18, "395001"),
+        ("West Bengal", "Howrah", (22.5958, 88.2636), "UCO Bank", "Industrial", 9200000, 26, "711101"),
+        ("Telangana", "Warangal Urban", (17.9689, 79.5941), "State Bank of India", "Residential", 4400000, 15, "506001"),
+        ("Rajasthan", "Jodhpur", (26.2389, 73.0243), "Bank of Baroda", "Residential", 3700000, 29, "342001"),
+        ("Madhya Pradesh", "Bhopal", (23.2599, 77.4126), "Punjab National Bank", "Commercial", 9500000, 20, "462001"),
+        ("Karnataka", "Belagavi", (15.8497, 74.4977), "Canara Bank", "Plot / land", 2900000, 11, "590001"),
+        ("Bihar", "Gaya", (24.7955, 85.0002), "State Bank of India", "Residential", 3200000, 22, "823001"),
     ]
     records = []
     for index, (state, district, (lat, lng), bank, ptype, reserve, days_out, pincode) in enumerate(seeds, start=1):
@@ -168,7 +180,7 @@ def sample_records() -> list[dict]:
             "noticeUrl": "https://www.ibapi.in",
             "lat": lat,
             "lng": lng,
-            "coordConfidence": "district",
+            "coordConfidence": "locality",
         })
     return records
 
