@@ -424,3 +424,7 @@ html[lang="hi"] .map-note { letter-spacing: .025em; text-transform: none; }
 .layer-chip i { width: 9px; height: 9px; border-radius: 50%; background: #d96f38; opacity: .4; }
 .layer-chip.active { background: var(--green-deep); color: #f9f6ed; border-color: transparent; }
 .layer-chip.active i { opacity: 1; }
+
+/* Due-diligence CTA in the header */
+.header-link-cta { background: var(--green-deep); color: #f9f6ed !important; padding: 7px 13px; border-radius: 9px; }
+.header-link-cta span { color: #f9f6ed; }

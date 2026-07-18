@@ -768,6 +768,7 @@ export function RoadWatch() {
             )}
           </div>
           {checkedLabel && <span className="update-stamp"><i /> {t.dataChecked} {checkedLabel}</span>}
+          <a className="header-link header-link-cta" href={`${PUBLIC_BASE_PATH}/due-diligence`}>{language === "hi" ? "प्लॉट सत्यापित करें" : "Verify a plot"} <span>↗</span></a>
           <a className="header-link" href={`${PUBLIC_BASE_PATH}/auctions`}>{language === "hi" ? "बैंक नीलामी" : "Bank auctions"} <span>↗</span></a>
           <a className="header-link" href="#methodology">{t.sourcesCautions} <span>↗</span></a>
         </div>
