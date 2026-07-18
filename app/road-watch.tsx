@@ -11,7 +11,11 @@ import {
   translateState,
   translations,
   type Language,
+  type GeoNames,
+  type NameLanguage,
+  AVAILABLE_REGIONAL_LOCALES,
 } from "./i18n";
+import { stateRegionalLanguage, languageAutonyms } from "./state-languages";
 import { majorProjects, type ProjectStage } from "./major-projects";
 
 type StateSummary = {
@@ -181,7 +185,7 @@ function ruralProjectToDisplay(project: RuralProject, language: Language): Displ
   };
 }
 
-function districtMajorProjects(districtName: string, language: Language): DisplayProject[] {
+function districtMajorProjects(districtName: string, language: Language, nameLanguage: NameLanguage, geo: GeoNames | null): DisplayProject[] {
   const t = translations[language];
   return majorProjects
     .filter((project) => project.districts.includes(districtName))
@@ -191,7 +195,7 @@ function districtMajorProjects(districtName: string, language: Language): Displa
       road: project.road,
       category: project.category,
       stage: project.stage,
-      area: project.districts.map((district) => translateDistrict(district, language)).join(" · "),
+      area: project.districts.map((district) => translateDistrict(district, nameLanguage, geo)).join(" · "),
       detailOneLabel: t.length,
       detailOne: project.length,
       detailTwoLabel: t.investmentMode,
@@ -333,7 +337,14 @@ function RoadMap({
 }
 
 export function RoadWatch() {
-  const [language, setLanguage] = useState<Language>("en");
+  // "regional" resolves to the selected state's own language when a locale
+  // file for it has shipped; otherwise names fall back to English.
+  const [langChoice, setLangChoice] = useState<"en" | "hi" | "regional">(() => {
+    if (typeof window === "undefined") return "en";
+    const saved = window.localStorage.getItem("mrw-lang");
+    return saved === "en" || saved === "hi" || saved === "regional" ? saved : "en";
+  });
+  const [geoCache, setGeoCache] = useState<Record<string, GeoNames>>({});
   const [states, setStates] = useState<StateSummary[]>([]);
   const [stateId, setStateId] = useState(DEFAULT_STATE);
   const [districts, setDistricts] = useState<DistrictSummary[]>([]);
@@ -349,7 +360,32 @@ export function RoadWatch() {
   const [refreshTick, setRefreshTick] = useState(0);
   const lastLoadedDistrict = useRef<string | null>(null);
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
+  const regionalCode = stateRegionalLanguage[stateId] ?? null;
+  const regionalAvailable =
+    regionalCode !== null && regionalCode !== "hi" && AVAILABLE_REGIONAL_LOCALES.includes(regionalCode);
+  const nameLanguage: NameLanguage =
+    langChoice === "regional" ? (regionalAvailable ? regionalCode : "en") : langChoice;
+  const language: Language = langChoice === "hi" ? "hi" : "en";
+  const geoNames: GeoNames | null = nameLanguage === "en" ? null : geoCache[nameLanguage] ?? null;
   const t = translations[language];
+
+  useEffect(() => {
+    if (nameLanguage === "en" || geoCache[nameLanguage]) return;
+    let cancelled = false;
+    fetch(`${PUBLIC_BASE_PATH}/locales/${nameLanguage}/geo.json`, { cache: "force-cache" })
+      .then((response) => {
+        if (!response.ok) throw new Error("locale unavailable");
+        return response.json() as Promise<GeoNames>;
+      })
+      .then((geo) => {
+        if (!cancelled) setGeoCache((cache) => ({ ...cache, [nameLanguage]: geo }));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [nameLanguage, geoCache]);
+
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -366,17 +402,12 @@ export function RoadWatch() {
   }, [refreshTick]);
 
   useEffect(() => {
-    fetch(`${PUBLIC_BASE_PATH}/data/roads/states-manifest.json`, { cache: "no-cache" })
+    fetch(`${PUBLIC_BASE_PATH}/data/roads/states.json`, { cache: "no-cache" })
       .then((response) => {
-        if (!response.ok) throw new Error("State manifest unavailable");
-        return response.json() as Promise<{ states: Array<StateSummary & { status: string }> }>;
+        if (!response.ok) throw new Error("State index unavailable");
+        return response.json() as Promise<StateSummary[]>;
       })
-      .then((manifest) => {
-        const deployedStates = manifest.states
-          .filter((state) => state.status === "deployed")
-          .map((state) => ({ id: state.id, name: state.name, districtCount: state.districtCount }));
-        setStates(deployedStates);
-      })
+      .then(setStates)
       .catch(() => {});
   }, [refreshTick]);
 
@@ -425,11 +456,11 @@ export function RoadWatch() {
   const districtSummary = districts.find((item) => item.code === districtCode);
   const currentDataset = dataset?.district.code === districtCode ? dataset : null;
   const districtName = currentDataset?.district.name ?? districtSummary?.name ?? "Bhopal";
-  const displayDistrictName = translateDistrict(districtName, language);
+  const displayDistrictName = translateDistrict(districtName, nameLanguage, geoNames);
   const allProjects = currentDataset
     ? [
         ...currentDataset.ruralProjects.map((project) => ruralProjectToDisplay(project, language)),
-        ...districtMajorProjects(districtName, language),
+        ...districtMajorProjects(districtName, language, nameLanguage, geoNames),
       ]
     : [];
   const filteredProjects = allProjects.filter((project) => {
@@ -503,9 +534,14 @@ export function RoadWatch() {
     setSelectedId(null);
   }
 
-  function changeLanguage(nextLanguage: Language) {
-    setLanguage(nextLanguage);
-    document.documentElement.lang = nextLanguage;
+  function changeLanguage(next: "en" | "hi" | "regional") {
+    setLangChoice(next);
+    try {
+      window.localStorage.setItem("mrw-lang", next);
+    } catch {
+      /* private mode */
+    }
+    document.documentElement.lang = next === "regional" ? (regionalAvailable && regionalCode ? regionalCode : "en") : next;
   }
 
   return (
@@ -517,8 +553,17 @@ export function RoadWatch() {
         </a>
         <div className="header-actions">
           <div className="language-toggle" role="group" aria-label={t.languageLabel}>
-            <button type="button" className={language === "en" ? "active" : ""} aria-pressed={language === "en"} aria-label={t.english} onClick={() => changeLanguage("en")}>EN</button>
-            <button type="button" className={language === "hi" ? "active" : ""} aria-pressed={language === "hi"} aria-label={t.hindi} onClick={() => changeLanguage("hi")}>हिंदी</button>
+            <button type="button" className={langChoice === "en" ? "active" : ""} aria-pressed={langChoice === "en"} aria-label={t.english} onClick={() => changeLanguage("en")}>EN</button>
+            <button type="button" className={langChoice === "hi" ? "active" : ""} aria-pressed={langChoice === "hi"} aria-label={t.hindi} onClick={() => changeLanguage("hi")}>हिंदी</button>
+            {regionalAvailable && regionalCode && (
+              <button
+                type="button"
+                className={langChoice === "regional" ? "active" : ""}
+                aria-pressed={langChoice === "regional"}
+                aria-label={languageAutonyms[regionalCode] ?? regionalCode}
+                onClick={() => changeLanguage("regional")}
+              >{languageAutonyms[regionalCode] ?? regionalCode}</button>
+            )}
           </div>
           {checkedLabel && <span className="update-stamp"><i /> {t.dataChecked} {checkedLabel}</span>}
           <a className="header-link" href="#methodology">{t.sourcesCautions} <span>↗</span></a>
@@ -545,8 +590,8 @@ export function RoadWatch() {
         </div>
         <div className="district-select-wrap state-select-wrap">
           <select id="state-select" value={stateId} onChange={(event) => changeState(Number(event.target.value))}>
-            {states.length === 0 && <option value={DEFAULT_STATE}>{translateState(DEFAULT_STATE_NAME, language)}</option>}
-            {states.map((item) => <option key={item.id} value={item.id}>{translateState(item.name, language)}</option>)}
+            {states.length === 0 && <option value={DEFAULT_STATE}>{translateState(DEFAULT_STATE_NAME, nameLanguage, geoNames)}</option>}
+            {states.map((item) => <option key={item.id} value={item.id}>{translateState(item.name, nameLanguage, geoNames)}</option>)}
           </select>
           <span aria-hidden="true">↓</span>
         </div>
@@ -556,8 +601,8 @@ export function RoadWatch() {
         </div>
         <div className="district-select-wrap">
           <select id="district-select" value={districtCode} onChange={(event) => setDistrictCode(Number(event.target.value))}>
-            {districts.length === 0 && <option value={DEFAULT_DISTRICT}>{translateDistrict("Bhopal", language)}</option>}
-            {districts.map((item) => <option key={item.code} value={item.code}>{translateDistrict(item.name, language)}</option>)}
+            {districts.length === 0 && <option value={DEFAULT_DISTRICT}>{translateDistrict("Bhopal", nameLanguage, geoNames)}</option>}
+            {districts.map((item) => <option key={item.code} value={item.code}>{translateDistrict(item.name, nameLanguage, geoNames)}</option>)}
           </select>
           <span aria-hidden="true">↓</span>
         </div>

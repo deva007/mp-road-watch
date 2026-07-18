@@ -1,33 +1,28 @@
 [
   {
     "id": 2,
-    "name": "Arunachal Pradesh",
+    "name": "Andhra Pradesh",
     "districtCount": 13
   },
   {
     "id": 3,
-    "name": "Assam",
+    "name": "Arunachal Pradesh",
     "districtCount": 25
   },
   {
     "id": 4,
-    "name": "Bihar",
+    "name": "Assam",
     "districtCount": 26
   },
   {
     "id": 5,
-    "name": "Chhattisgarh",
+    "name": "Bihar",
     "districtCount": 38
   },
   {
     "id": 7,
     "name": "Chhattisgarh",
     "districtCount": 28
-  },
-  {
-    "id": 37,
-    "name": "Dadra and Nagar Haveli",
-    "districtCount": 2
   },
   {
     "id": 12,
@@ -45,14 +40,29 @@
     "districtCount": 12
   },
   {
-    "id": 17,
+    "id": 15,
     "name": "Jammu and Kashmir",
+    "districtCount": 20
+  },
+  {
+    "id": 16,
+    "name": "Jharkhand",
+    "districtCount": 24
+  },
+  {
+    "id": 17,
+    "name": "Karnataka",
     "districtCount": 30
   },
   {
-    "id": 35,
-    "name": "Lakshadweep",
-    "districtCount": 23
+    "id": 18,
+    "name": "Kerala",
+    "districtCount": 14
+  },
+  {
+    "id": 37,
+    "name": "Ladakh",
+    "districtCount": 2
   },
   {
     "id": 20,
@@ -65,11 +75,6 @@
     "districtCount": 34
   },
   {
-    "id": 15,
-    "name": "Manipur",
-    "districtCount": 20
-  },
-  {
     "id": 22,
     "name": "Manipur",
     "districtCount": 9
@@ -80,48 +85,48 @@
     "districtCount": 7
   },
   {
-    "id": 18,
-    "name": "Mizoram",
-    "districtCount": 14
-  },
-  {
     "id": 24,
     "name": "Mizoram",
     "districtCount": 8
   },
   {
-    "id": 26,
-    "name": "Puducherry",
-    "districtCount": 30
-  },
-  {
     "id": 25,
-    "name": "Punjab",
+    "name": "Nagaland",
     "districtCount": 11
   },
   {
+    "id": 26,
+    "name": "Odisha",
+    "districtCount": 30
+  },
+  {
+    "id": 28,
+    "name": "Punjab",
+    "districtCount": 22
+  },
+  {
     "id": 29,
-    "name": "Sikkim",
+    "name": "Rajasthan",
     "districtCount": 33
   },
   {
     "id": 30,
-    "name": "Tamil Nadu",
+    "name": "Sikkim",
     "districtCount": 4
   },
   {
-    "id": 28,
-    "name": "Telangana",
-    "districtCount": 22
-  },
-  {
     "id": 31,
-    "name": "Telangana",
+    "name": "Tamil Nadu",
     "districtCount": 37
   },
   {
+    "id": 36,
+    "name": "Telangana",
+    "districtCount": 32
+  },
+  {
     "id": 32,
-    "name": "Uttar Pradesh",
+    "name": "Tripura",
     "districtCount": 8
   },
   {
@@ -130,18 +135,13 @@
     "districtCount": 75
   },
   {
-    "id": 16,
-    "name": "Uttarakhand",
-    "districtCount": 24
-  },
-  {
     "id": 34,
     "name": "Uttarakhand",
     "districtCount": 13
   },
   {
-    "id": 36,
+    "id": 35,
     "name": "West Bengal",
-    "districtCount": 32
+    "districtCount": 23
   }
 ]

@@ -162,6 +162,25 @@ def load_gis_with_retry(
     raise RuntimeError("unreachable")
 
 
+MASTER_PATH = Path(__file__).resolve().parent / "data" / "states-master.json"
+
+
+def resolve_state_name(state_id: int, override: str | None) -> str:
+    """Canonical name from states-master.json; an override must agree with it."""
+    master = {int(k): v for k, v in json.loads(MASTER_PATH.read_text(encoding="utf-8")).items()}
+    entry = master.get(state_id)
+    if entry is None:
+        raise SystemExit(f"state id {state_id} is not in scripts/data/states-master.json — add it there first")
+    if not entry.get("buildable", True):
+        raise SystemExit(f"state id {state_id} ({entry['name']}) is marked unbuildable in states-master.json")
+    if override and override != entry["name"]:
+        raise SystemExit(
+            f"--state-name {override!r} conflicts with states-master.json ({entry['name']!r}); "
+            "fix the master registry instead of overriding"
+        )
+    return entry["name"]
+
+
 def update_states_index(data_root: Path, state_id: int, state_name: str, district_count: int) -> None:
     """Merge this state's entry into data_root/states.json (the state picker index)."""
     states_path = data_root / "states.json"
@@ -180,8 +199,9 @@ def build(
     output_root: Path,
     gis_source: str = GIS_URL,
     state_id: int = 20,
-    state_name: str = "Madhya Pradesh",
+    state_name: str | None = None,
 ) -> None:
+    state_name = resolve_state_name(state_id, state_name)
     active_status = load_active_status(status_path)
     gis_records, gis_district_names = load_gis_with_retry(gis_source, state_id)
 
@@ -362,7 +382,11 @@ if __name__ == "__main__":
     )
     parser.add_argument("--gis-source", default=GIS_URL)
     parser.add_argument("--state-id", type=int, default=20, help="PMGSY STATE_ID (20 = Madhya Pradesh)")
-    parser.add_argument("--state-name", default="Madhya Pradesh")
+    parser.add_argument(
+        "--state-name",
+        default=None,
+        help="Optional check only — must match states-master.json; names are never taken from the CLI",
+    )
     arguments = parser.parse_args()
     build(
         arguments.status_csv,

@@ -226,64 +226,6 @@ const roadTypeLabels: Record<Language, Record<string, string>> = {
   },
 };
 
-const hindiDistrictNames: Record<string, string> = {
-  Agar: "आगर मालवा (स्रोत में आगर)",
-  Alirajpur: "अलीराजपुर",
-  Anuppur: "अनूपपुर",
-  "Ashok Nagar": "अशोकनगर",
-  Balaghat: "बालाघाट",
-  Barwani: "बड़वानी",
-  Betul: "बैतूल",
-  Bhind: "भिंड",
-  Bhopal: "भोपाल",
-  Burhanpur: "बुरहानपुर",
-  Chhatarpur: "छतरपुर",
-  Chhindwara: "छिंदवाड़ा",
-  Damoh: "दमोह",
-  Datia: "दतिया",
-  Dewas: "देवास",
-  Dhar: "धार",
-  Dindori: "डिंडौरी",
-  Guna: "गुना",
-  Gwalior: "ग्वालियर",
-  Harda: "हरदा",
-  Hoshangabad: "नर्मदापुरम (स्रोत में होशंगाबाद)",
-  Indore: "इंदौर",
-  Jabalpur: "जबलपुर",
-  Jhabua: "झाबुआ",
-  Katni: "कटनी",
-  Khandwa: "खंडवा",
-  Khargone: "खरगोन",
-  Maihar: "मैहर",
-  Mandla: "मंडला",
-  Mandsour: "मंदसौर (स्रोत में Mandsour)",
-  Mauganj: "मऊगंज",
-  Morena: "मुरैना",
-  Narsinghpur: "नरसिंहपुर",
-  Neemuch: "नीमच",
-  Niwari: "निवाड़ी",
-  Pandhurna: "पांढुर्णा",
-  Panna: "पन्ना",
-  Raisen: "रायसेन",
-  Rajgarh: "राजगढ़",
-  Ratlam: "रतलाम",
-  Rewa: "रीवा",
-  Sagar: "सागर",
-  Satna: "सतना",
-  Sehore: "सीहोर",
-  Seoni: "सिवनी",
-  Shahdol: "शहडोल",
-  Shajapur: "शाजापुर",
-  Sheopur: "श्योपुर",
-  Shivpuri: "शिवपुरी",
-  Sidhi: "सीधी",
-  Singrauli: "सिंगरौली",
-  Tikamgarh: "टीकमगढ़",
-  Ujjain: "उज्जैन",
-  Umaria: "उमरिया",
-  Vidisha: "विदिशा",
-};
-
 export const majorProjectNotesHi: Record<string, string> = {
   "bhopal-biaora": "आधिकारिक परियोजना सारांश में भोपाल से सीहोर होते हुए ब्यावरा तक चार लेन निर्माण शामिल है। भूखंड पर निर्णय से पहले नवीनतम अधिसूचित एलाइनमेंट की पुष्टि करें।",
   "bhopal-berasia-sironj": "आधिकारिक परियोजना सारांश में भोपाल–बैरसिया–सिरोंज राज्य राजमार्ग कॉरिडोर के सुधार का विवरण है।",
@@ -309,49 +251,29 @@ export function translateRoadType(type: string, language: Language): string {
   return roadTypeLabels[language][type] ?? type;
 }
 
-const hindiStateNames: Record<string, string> = {
-  "Arunachal Pradesh": "अरुणाचल प्रदेश",
-  "Assam": "असम",
-  "Bihar": "बिहार",
-  "Chhattisgarh": "छत्तीसगढ़",
-  "Dadra and Nagar Haveli": "दादरा और नगर हवेली",
-  "Goa": "गोआ",
-  "Gujarat": "गुजरात",
-  "Haryana": "हरियाणा",
-  "Himachal Pradesh": "हिमाचल प्रदेश",
-  "Jammu and Kashmir": "जम्मू और कश्मीर",
-  "Jharkhand": "झारखंड",
-  "Karnataka": "कर्नाटक",
-  "Kerala": "केरल",
-  "Lakshadweep": "लक्षद्वीप",
-  "Madhya Pradesh": "मध्य प्रदेश",
-  "Maharashtra": "महाराष्ट्र",
-  "Manipur": "मणिपुर",
-  "Meghalaya": "मेघालय",
-  "Mizoram": "मिजोरम",
-  "Odisha": "ओडिशा",
-  "Puducherry": "पुडुचेरी",
-  "Punjab": "पंजाब",
-  "Rajasthan": "राजस्थान",
-  "Sikkim": "सिक्किम",
-  "Tamil Nadu": "तमिलनाडु",
-  "Telangana": "तेलंगाना",
-  "Uttar Pradesh": "उत्तर प्रदेश",
-  "Uttarakhand": "उत्तराखंड",
-  "West Bengal": "पश्चिम बंगाल",
-};
+// State and district names now live in lazy-loaded locale files:
+// public/locales/{lang}/geo.json — { states: {en->local}, districts: {en->local} }.
+// Hindi is complete; regional files ship state-by-state. Fallback is English.
+export type GeoNames = { states: Record<string, string>; districts: Record<string, string> };
+export type NameLanguage = "en" | "hi" | (string & {});
 
-export function translateState(name: string, language: Language): string {
-  if (language === "hi") return hindiStateNames[name] ?? name;
-  return name;
+// Regional locales with a shipped geo file. Update when adding a language;
+// scripts/validate-locales.py cross-checks this list against public/locales/.
+export const AVAILABLE_REGIONAL_LOCALES: readonly string[] = ["kn", "ta", "bn"];
+
+export function translateState(name: string, language: NameLanguage, geo: GeoNames | null): string {
+  if (language === "en" || !geo) return name;
+  return geo.states[name] ?? name;
 }
 
-export function translateDistrict(name: string, language: Language): string {
-  if (language === "hi") return hindiDistrictNames[name] ?? name;
-  if (name === "Agar") return "Agar Malwa (Agar in source)";
-  if (name === "Hoshangabad") return "Narmadapuram (Hoshangabad in source)";
-  if (name === "Mandsour") return "Mandsaur (Mandsour in source)";
-  return name;
+export function translateDistrict(name: string, language: NameLanguage, geo: GeoNames | null): string {
+  if (language === "en" || !geo) {
+    if (name === "Agar") return "Agar Malwa (Agar in source)";
+    if (name === "Hoshangabad") return "Narmadapuram (Hoshangabad in source)";
+    if (name === "Mandsour") return "Mandsaur (Mandsour in source)";
+    return name;
+  }
+  return geo.districts[name] ?? name;
 }
 
 export function translatePrecision(value: string, language: Language): string {

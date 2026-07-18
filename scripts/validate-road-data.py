@@ -14,8 +14,13 @@ Run as `python3 scripts/validate-road-data.py public/data/roads`.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
+
+MASTER_PATH = Path(__file__).resolve().parent / "data" / "states-master.json"
+PLACEHOLDER_STATE = re.compile(r"^State \d+$")
+PLACEHOLDER_DISTRICT = re.compile(r"^District \d+$")
 
 MIN_TOTAL_INVENTORY = 30_000
 MIN_TOTAL_PROJECTS = 1_000
@@ -36,10 +41,19 @@ def load_json(path: Path):
         fail(f"{path} is not valid JSON: {error}")
 
 
-def validate_state(data_root: Path, state: dict) -> tuple[int, int]:
+def validate_state(data_root: Path, state: dict, master: dict) -> tuple[int, int]:
     state_id = state.get("id")
     if not isinstance(state_id, int) or not state.get("name"):
         fail(f"states.json entry missing id or name: {state!r:.120}")
+    if PLACEHOLDER_STATE.match(state["name"]):
+        fail(f"state {state_id}: placeholder name {state['name']!r} — names must come from states-master.json")
+    expected = master.get(state_id)
+    if expected is None:
+        fail(f"state {state_id} not present in scripts/data/states-master.json")
+    if state["name"] != expected["name"]:
+        fail(f"state {state_id}: name {state['name']!r} does not match master {expected['name']!r}")
+    if not expected.get("buildable", True):
+        fail(f"state {state_id} ({expected['name']}) is marked unbuildable in states-master.json")
 
     state_dir = data_root / str(state_id)
     registry = load_json(state_dir / "districts.json")
@@ -57,6 +71,8 @@ def validate_state(data_root: Path, state: dict) -> tuple[int, int]:
         code = entry.get("code")
         if not isinstance(code, int) or not entry.get("name"):
             fail(f"state {state_id}: registry entry missing code or name: {entry!r:.120}")
+        if PLACEHOLDER_DISTRICT.match(entry["name"]):
+            fail(f"state {state_id}: district {code} has placeholder name {entry['name']!r}")
 
         district_path = state_dir / f"{code}.json"
         dataset = load_json(district_path)
@@ -86,12 +102,17 @@ def main(data_root: Path) -> None:
     states = load_json(data_root / "states.json")
     if not isinstance(states, list) or not states:
         fail("states.json must list at least one state")
+    master = {int(k): v for k, v in load_json(MASTER_PATH).items()}
+    names = [state.get("name") for state in states]
+    duplicates = sorted({name for name in names if names.count(name) > 1})
+    if duplicates:
+        fail(f"duplicate state names in states.json: {duplicates}")
 
     total_inventory = 0
     total_projects = 0
     total_districts = 0
     for state in states:
-        inventory, projects = validate_state(data_root, state)
+        inventory, projects = validate_state(data_root, state, master)
         total_inventory += inventory
         total_projects += projects
         total_districts += state["districtCount"]
