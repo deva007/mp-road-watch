@@ -747,45 +747,63 @@ export function RoadWatch() {
   }
 
   return (
-    <main data-language={language}>
-      <header className="site-header">
-        <a className="brand" href="#top" aria-label={t.homeLabel}>
-          <span className="brand-mark" aria-hidden="true"><i /><i /></span>
-          <span>MP Road Watch</span>
-        </a>
-        <div className="header-actions">
+    <main className="app" data-language={language}>
+      <div className="app-map">
+        <RoadMap
+          features={mode === "projects" ? projectFeatures : []}
+          selectedFeature={selectedFeature}
+          districtCenter={districtCenter}
+          mode={mode}
+          language={language}
+          onSelect={setSelectedId}
+          auctions={showAuctions ? stateAuctions : []}
+        />
+        <div className="map-layers">
+          <button
+            type="button"
+            className={showAuctions ? "layer-chip active" : "layer-chip"}
+            aria-pressed={showAuctions}
+            onClick={() => setShowAuctions((v) => !v)}
+          >
+            <i /> {language === "hi" ? "बैंक नीलामी" : "Bank auctions"}{showAuctions && stateAuctions.length ? ` · ${stateAuctions.length}` : ""}
+          </button>
+        </div>
+      </div>
+
+      <header className="app-top" id="top">
+        <div className="app-top-row">
+          <a className="brand" href={`${PUBLIC_BASE_PATH}/`} aria-label={t.homeLabel}>
+            <span className="brand-mark" aria-hidden="true"><i /><i /></span>
+          </a>
+          <div className="app-search">
+            <SearchCombobox
+              allDistricts={allDistricts}
+              states={states}
+              currentLabel={`${displayDistrictName} · ${translateState(states.find((x) => x.id === stateId)?.name ?? DEFAULT_STATE_NAME, nameLanguage, geoNames)}`}
+              nameLanguage={nameLanguage}
+              geoNames={geoNames}
+              onJumpDistrict={jumpToDistrict}
+              onPickState={changeState}
+              placeholder={t.chooseDistrict}
+            />
+          </div>
           <div className="language-toggle" role="group" aria-label={t.languageLabel}>
             <button type="button" className={langChoice === "en" ? "active" : ""} aria-pressed={langChoice === "en"} aria-label={t.english} onClick={() => changeLanguage("en")}>EN</button>
-            <button type="button" className={langChoice === "hi" ? "active" : ""} aria-pressed={langChoice === "hi"} aria-label={t.hindi} onClick={() => changeLanguage("hi")}>हिंदी</button>
+            <button type="button" className={langChoice === "hi" ? "active" : ""} aria-pressed={langChoice === "hi"} aria-label={t.hindi} onClick={() => changeLanguage("hi")}>हिं</button>
             {regionalAvailable && regionalCode && (
-              <button
-                type="button"
-                className={langChoice === "regional" ? "active" : ""}
-                aria-pressed={langChoice === "regional"}
-                aria-label={languageAutonyms[regionalCode] ?? regionalCode}
-                onClick={() => changeLanguage("regional")}
-              >{languageAutonyms[regionalCode] ?? regionalCode}</button>
+              <button type="button" className={langChoice === "regional" ? "active" : ""} aria-pressed={langChoice === "regional"} aria-label={languageAutonyms[regionalCode] ?? regionalCode} onClick={() => changeLanguage("regional")}>{(languageAutonyms[regionalCode] ?? regionalCode).slice(0, 3)}</button>
             )}
           </div>
-          {checkedLabel && <span className="update-stamp"><i /> {t.dataChecked} {checkedLabel}</span>}
-          <a className="header-link header-link-cta" href={`${PUBLIC_BASE_PATH}/due-diligence`}>{language === "hi" ? "प्लॉट सत्यापित करें" : "Verify a plot"} <span>↗</span></a>
-          <a className="header-link" href={`${PUBLIC_BASE_PATH}/auctions`}>{language === "hi" ? "बैंक नीलामी" : "Bank auctions"} <span>↗</span></a>
-          <a className="header-link" href="#methodology">{t.sourcesCautions} <span>↗</span></a>
+        </div>
+        <div className="app-top-links">
+          <a className="app-chip app-chip-cta" href={`${PUBLIC_BASE_PATH}/due-diligence`}>{language === "hi" ? "प्लॉट सत्यापित करें" : "Verify a plot"}</a>
+          <a className="app-chip" href={`${PUBLIC_BASE_PATH}/auctions`}>{language === "hi" ? "बैंक नीलामी" : "Bank auctions"}</a>
         </div>
       </header>
 
-      <section className="command-bar" id="top" aria-label={t.districtSelection}>
-        <div className="command-primary">
-          <SearchCombobox
-            allDistricts={allDistricts}
-            states={states}
-            currentLabel={`${displayDistrictName} · ${translateState(states.find((x) => x.id === stateId)?.name ?? DEFAULT_STATE_NAME, nameLanguage, geoNames)}`}
-            nameLanguage={nameLanguage}
-            geoNames={geoNames}
-            onJumpDistrict={jumpToDistrict}
-            onPickState={changeState}
-            placeholder={t.chooseDistrict}
-          />
+      <aside className="app-sheet" aria-label={t.roadDataView}>
+        <div className="sheet-grip" aria-hidden="true" />
+        <div className="sheet-selects">
           <CompactSelect
             label={t.chooseState}
             value={stateId}
@@ -799,187 +817,62 @@ export function RoadWatch() {
             options={districts.map((item) => ({ value: item.code, label: translateDistrict(item.name, nameLanguage, geoNames) }))}
           />
         </div>
-      </section>
-
-      <section className="tracker" aria-label={t.roadDataView}>
-        {!loading && currentDataset.inventory.length === 0 && (
-          <div className="source-gap-note">
-            <strong>{t.legacyGap}</strong>
-            <span>{t.legacyGapDetail}</span>
-          </div>
-        )}
-
         <div className="filter-panel">
           <label className="search-field">
             <span>{t.search}</span>
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={mode === "projects" ? t.projectPlaceholder : t.inventoryPlaceholder} />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t.inventoryPlaceholder} />
           </label>
-          {mode === "projects" && (
-            <label className="select-field">
-              <span>{t.projectStage}</span>
-              <select value={stage} onChange={(event) => setStage(event.target.value as ProjectStage | "All stages")}>
-                {projectStages.map((item) => <option key={item} value={item}>{translateStage(item, language)}</option>)}
-              </select>
-            </label>
-          )}
           <label className="select-field">
             <span>{t.roadType}</span>
             <select value={roadType} onChange={(event) => setRoadType(event.target.value)}>
-              {(mode === "projects" ? projectTypes : inventoryTypes).map((item) => <option key={item} value={item}>{translateRoadType(item, language)}</option>)}
+              {inventoryTypes.map((item) => <option key={item} value={item}>{translateRoadType(item, language)}</option>)}
             </select>
           </label>
           {hasFilters && <button type="button" className="clear-button" onClick={clearFilters}>{t.clear}</button>}
         </div>
-
-        <div className="workspace">
-          <div className="project-column">
-            <div className="result-count">
-              <span>{loading ? t.loadingDistrictData : `${formatNumber(modeCount)} ${mode === "projects" ? t.projectRecords : t.roadRecords}`}</span>
-              <span>{t.clickRow}</span>
-            </div>
-            <div className="project-list">
-              {!loading && mode === "projects" && filteredProjects.map((project, index) => {
-                const selected = project.id === activeSelectedId;
-                return (
-                  <article key={project.id} className={selected ? "project-card project-card-active" : "project-card"}>
-                    <button type="button" className="project-select" onClick={() => setSelectedId(project.id)} aria-pressed={selected}>
-                      <span className="project-number">{String(index + 1).padStart(2, "0")}</span>
-                      <span className="project-main">
-                        <span className="project-meta">
-                          <span className="stage" style={{ "--stage-color": stageColors[project.stage] } as React.CSSProperties}>{translateStage(project.stage, language)}</span>
-                          <span>{translateRoadType(project.category, language)}</span>
-                        </span>
-                        <strong>{project.name}</strong>
-                        <span className="road-name">{project.road}</span>
-                        <span className="district-line">{project.area}</span>
-                      </span>
-                      <span className="locate-arrow" aria-hidden="true">↗</span>
-                    </button>
-                    {selected && (
-                      <div className="project-detail">
-                        <div className="detail-grid">
-                          <span><small>{project.detailOneLabel}</small>{project.detailOne}</span>
-                          <span><small>{project.detailTwoLabel}</small>{project.detailTwo}</span>
-                        </div>
-                        <p>{project.statusNote}</p>
-                        <div className="precision-line"><i /> {translatePrecision(project.locationPrecision, language)}</div>
-                        <a href={project.sourceUrl} target="_blank" rel="noreferrer">{t.openOfficialSource} <span>↗</span></a>
-                      </div>
-                    )}
-                  </article>
-                );
-              })}
-
-              {!loading && mode === "inventory" && visibleInventory.map((road, index) => {
-                const selected = road.id === activeSelectedId;
-                return (
-                  <article key={road.id} className={selected ? "project-card project-card-active" : "project-card"}>
-                    <button type="button" className="project-select" onClick={() => setSelectedId(road.id)} aria-pressed={selected}>
-                      <span className="project-number">{String(index + 1).padStart(3, "0")}</span>
-                      <span className="project-main">
-                        <span className="project-meta inventory-meta"><span>{translateRoadType(road.category, language)}</span><span>{road.code || t.noRoadCode}</span></span>
-                        <strong>{road.name}</strong>
-                        <span className="road-name">{t.ownerInGis}: {road.owner}</span>
-                      </span>
-                      <span className="locate-arrow" aria-hidden="true">↗</span>
-                    </button>
-                    {selected && (
-                      <div className="project-detail inventory-detail">
-                        <p>{t.inventoryMembership}</p>
-                        <div className="precision-line"><i /> {road.route ? t.officialGisRoadLine : t.officialGisRoadBoundsFallback}</div>
-                        <a href="https://www.pib.gov.in/Pressreleaseshare.aspx?PRID=1808291&lang=2&reg=48" target="_blank" rel="noreferrer">{t.aboutGisRelease} <span>↗</span></a>
-                      </div>
-                    )}
-                  </article>
-                );
-              })}
-
-              {!loading && modeCount === 0 && (
-                <div className="empty-state">
-                  <strong>{t.noMatchingRoads}</strong>
-                  <p>{t.tryBroader}</p>
-                  <button type="button" onClick={clearFilters}>{t.clearFilters}</button>
-                </div>
-              )}
-              {loading && <div className="loading-state"><i /><span>{t.loadingRoads}: {displayDistrictName}</span></div>}
-              {mode === "inventory" && visibleInventory.length < filteredInventory.length && (
-                <button className="load-more" type="button" onClick={() => setVisibleLimit((value) => value + PAGE_SIZE)}>
-                  {t.loadMore} <span>{formatNumber(filteredInventory.length - visibleInventory.length)} {t.remaining}</span>
+        <div className="result-count">
+          <span>{loading ? t.loadingDistrictData : `${formatNumber(modeCount)} ${t.roadRecords}`}</span>
+          <span>{t.clickRow}</span>
+        </div>
+        <div className="project-list">
+          {!loading && visibleInventory.map((road, index) => {
+            const selected = road.id === activeSelectedId;
+            return (
+              <article key={road.id} className={selected ? "project-card project-card-active" : "project-card"}>
+                <button type="button" className="project-select" onClick={() => setSelectedId(road.id)} aria-pressed={selected}>
+                  <span className="project-number">{String(index + 1).padStart(3, "0")}</span>
+                  <span className="project-main">
+                    <span className="project-meta inventory-meta"><span>{translateRoadType(road.category, language)}</span><span>{road.code || t.noRoadCode}</span></span>
+                    <strong>{road.name}</strong>
+                    <span className="road-name">{t.ownerInGis}: {road.owner}</span>
+                  </span>
+                  <span className="locate-arrow" aria-hidden="true">↗</span>
                 </button>
-              )}
+                {selected && (
+                  <div className="project-detail inventory-detail">
+                    <p>{t.inventoryMembership}</p>
+                    <div className="precision-line"><i /> {road.route ? t.officialGisRoadLine : t.officialGisRoadBoundsFallback}</div>
+                    <a href="https://www.pib.gov.in/Pressreleaseshare.aspx?PRID=1808291&lang=2&reg=48" target="_blank" rel="noreferrer">{t.aboutGisRelease} <span>↗</span></a>
+                  </div>
+                )}
+              </article>
+            );
+          })}
+          {!loading && modeCount === 0 && (
+            <div className="empty-state">
+              <strong>{t.noMatchingRoads}</strong>
+              <p>{t.tryBroader}</p>
+              <button type="button" onClick={clearFilters}>{t.clearFilters}</button>
             </div>
-          </div>
-
-          <div className="map-column">
-            <RoadMap
-              features={mode === "projects" ? projectFeatures : []}
-              selectedFeature={selectedFeature}
-              districtCenter={districtCenter}
-              mode={mode}
-              language={language}
-              onSelect={setSelectedId}
-              auctions={showAuctions ? stateAuctions : []}
-            />
-            <div className="map-layers">
-              <button
-                type="button"
-                className={showAuctions ? "layer-chip active" : "layer-chip"}
-                aria-pressed={showAuctions}
-                onClick={() => setShowAuctions((v) => !v)}
-              >
-                <i /> {language === "hi" ? "बैंक नीलामी" : "Bank auctions"}{showAuctions && stateAuctions.length ? ` · ${stateAuctions.length}` : ""}
-              </button>
-            </div>
-            <div className="map-overlay map-title">
-              <span>{mode === "projects" ? t.selectedProject : t.selectedInventoryRoad}</span>
-              <strong>{mode === "projects" ? selectedProject?.name ?? `${displayDistrictName} ${t.district}` : selectedRoad?.name ?? `${displayDistrictName} ${t.district}`}</strong>
-            </div>
-            <div className="map-overlay map-note"><span className="pulse" /> {selectedFeature?.locationPrecision ? translatePrecision(selectedFeature.locationPrecision, language) : t.selectRoad}</div>
-            {mode === "projects" && (
-              <div className="map-legend">
-                {projectStages.slice(1).map((item) => <span key={item}><i style={{ background: stageColors[item as ProjectStage] }} />{translateStage(item, language)}</span>)}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className="road-breakdown" aria-labelledby="breakdown-title">
-        <div className="breakdown-heading">
-          <p className="section-kicker">{t.districtInventory}</p>
-          <h2 id="breakdown-title">{t.whatMapped} {displayDistrictName}</h2>
-          <p>{t.breakdownDetail}</p>
-        </div>
-        <div className="breakdown-grid">
-          {inventoryTypes.slice(1).map((type) => (
-            <button key={type} type="button" onClick={() => { changeMode("inventory"); setRoadType(type); document.querySelector(".tracker")?.scrollIntoView({ behavior: "smooth" }); }}>
-              <span>{translateRoadType(type, language)}</span>
-              <strong>{formatNumber(districtSummary?.categoryCounts[type] ?? 0)}</strong>
-              <i style={{ width: `${Math.max(4, ((districtSummary?.categoryCounts[type] ?? 0) / Math.max(1, districtSummary?.inventoryCount ?? 1)) * 100)}%` }} />
+          )}
+          {loading && <div className="loading-state"><i /><span>{t.loadingRoads}: {displayDistrictName}</span></div>}
+          {visibleInventory.length < filteredInventory.length && (
+            <button className="load-more" type="button" onClick={() => setVisibleLimit((value) => value + PAGE_SIZE)}>
+              {t.loadMore} <span>{formatNumber(filteredInventory.length - visibleInventory.length)} {t.remaining}</span>
             </button>
-          ))}
+          )}
         </div>
-      </section>
-
-      <section className="methodology" id="methodology">
-        <div className="method-intro">
-          <p className="section-kicker">{t.beforeLand}</p>
-          <h2>{t.evidenceFirst}<br />{t.parcelNext}</h2>
-          <p>{t.screeningTool}</p>
-        </div>
-        <div className="method-cards">
-          <article><span>01</span><h3>{t.projectStatus}</h3><p>{t.projectStatusDetail}</p></article>
-          <article><span>02</span><h3>{t.roadInventory}</h3><p>{t.roadInventoryDetail}</p></article>
-          <article><span>03</span><h3>{t.locationPrecision}</h3><p>{t.locationPrecisionDetail}</p></article>
-          <article><span>04</span><h3>{t.dueDiligence}</h3><p>{t.dueDiligenceDetail}</p></article>
-        </div>
-      </section>
-
-      <footer>
-        <div className="brand footer-brand"><span className="brand-mark" aria-hidden="true"><i /><i /></span><span>MP Road Watch</span></div>
-        <p>{t.footerSources}</p>
-        <a href="#top">{t.backToTop} ↑</a>
-      </footer>
+      </aside>
     </main>
   );
 }

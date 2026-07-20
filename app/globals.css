@@ -428,3 +428,59 @@ html[lang="hi"] .map-note { letter-spacing: .025em; text-transform: none; }
 /* Due-diligence CTA in the header */
 .header-link-cta { background: var(--green-deep); color: #f9f6ed !important; padding: 7px 13px; border-radius: 9px; }
 .header-link-cta span { color: #f9f6ed; }
+
+/* ================= Single-screen app shell ================= */
+main.app {
+  position: fixed; inset: 0; width: 100%; height: 100dvh;
+  overflow: hidden; background: #e3ebe3;
+}
+main.app .app-map { position: absolute; inset: 0; z-index: 1; }
+main.app .app-map .map-canvas { width: 100%; height: 100%; border-radius: 0; }
+
+.app-top {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 600;
+  padding: 10px 12px 8px; display: flex; flex-direction: column; gap: 8px;
+  background: linear-gradient(#faf8f2 60%, rgba(250,248,242,0));
+}
+.app-top-row { display: flex; align-items: center; gap: 8px; }
+.app-top .brand { flex: 0 0 auto; }
+.app-top .brand span:not(.brand-mark) { display: none; }
+.app-search { flex: 1 1 auto; min-width: 0; }
+.app-search .combo { height: 44px; box-shadow: 0 2px 12px rgba(29,42,36,.12); }
+.app-top .language-toggle { flex: 0 0 auto; }
+.app-top .language-toggle button { padding: 6px 8px; font-size: 12px; }
+.app-top-links { display: flex; gap: 8px; }
+.app-chip {
+  font-size: 12.5px; font-weight: 600; text-decoration: none; color: var(--ink);
+  background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px;
+  box-shadow: 0 2px 10px rgba(29,42,36,.10);
+}
+.app-chip-cta { background: var(--green-deep); color: #f9f6ed; border-color: transparent; }
+
+.app-sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 500;
+  background: #fff; border-radius: 18px 18px 0 0;
+  box-shadow: 0 -6px 24px rgba(29,42,36,.16);
+  height: 46dvh; display: flex; flex-direction: column;
+  padding: 6px 14px 0;
+}
+.sheet-grip { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 6px auto 8px; flex: 0 0 auto; }
+.sheet-selects { display: flex; gap: 8px; flex: 0 0 auto; }
+.sheet-selects .cselect { flex: 1; min-width: 0; }
+.app-sheet .filter-panel { display: flex; gap: 8px; margin: 10px 0 6px; flex: 0 0 auto; padding: 0; background: none; align-items: end; }
+.app-sheet .filter-panel .search-field { flex: 1; }
+.app-sheet .result-count { flex: 0 0 auto; display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); padding: 4px 0 8px; }
+.app-sheet .project-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: 16px; }
+
+/* auction chip sits above the sheet */
+main.app .map-layers { top: auto; bottom: calc(46dvh + 12px); left: 12px; }
+
+/* desktop: sheet becomes a left side panel */
+@media (min-width: 861px) {
+  .app-top { max-width: 520px; }
+  .app-sheet {
+    top: 92px; bottom: 16px; left: 16px; right: auto; height: auto;
+    width: 380px; border-radius: 16px; border: 1px solid var(--line);
+  }
+  main.app .map-layers { bottom: auto; top: 16px; left: 412px; }
+}
