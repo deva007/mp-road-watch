@@ -267,6 +267,15 @@ function RoadMap({
       const layer = L.layerGroup().addTo(map);
       layerRef.current = layer;
 
+      // Fit selected features into the VISIBLE map area (above the mobile sheet
+      // / right of the desktop side panel), not behind them.
+      const mobile = typeof window !== "undefined" && window.innerWidth < 861;
+      const padTL: [number, number] = mobile ? [16, 104] : [416, 20];
+      const padBR: [number, number] = mobile ? [16, Math.round((typeof window !== "undefined" ? window.innerHeight : 700) * 0.5)] : [24, 24];
+      const fitOpts = (maxZoom: number) => ({ paddingTopLeft: padTL, paddingBottomRight: padBR, maxZoom });
+      const centerPoint = (pt: [number, number], maxZoom: number) =>
+        map.fitBounds(L.latLng(pt[0], pt[1]).toBounds(1600), fitOpts(maxZoom));
+
       if (mode === "projects") {
         features.forEach((feature) => {
           if (!feature.route || !feature.stage) return;
@@ -301,7 +310,7 @@ function RoadMap({
             fillOpacity: 1,
           }).addTo(layer);
         });
-        map.fitBounds(L.latLngBounds(selectedFeature.route), { padding: [62, 62], maxZoom: 13 });
+        map.fitBounds(L.latLngBounds(selectedFeature.route), fitOpts(14));
       } else if (selectedFeature?.bounds) {
         const bounds = L.latLngBounds(
           [selectedFeature.bounds[0], selectedFeature.bounds[1]],
@@ -313,7 +322,7 @@ function RoadMap({
           fillColor: "#d96f38",
           fillOpacity: 0.12,
         }).addTo(layer).bindTooltip(selectedFeature.name);
-        map.fitBounds(bounds, { padding: [72, 72], maxZoom: 14 });
+        map.fitBounds(bounds, fitOpts(15));
       } else if (selectedFeature) {
         L.circleMarker(districtCenter, {
           radius: 10,
@@ -322,11 +331,11 @@ function RoadMap({
           fillColor: selectedFeature.stage ? stageColors[selectedFeature.stage] : "#214f42",
           fillOpacity: 0.92,
         }).addTo(layer).bindTooltip(`${selectedFeature.name} · ${translations[language].districtAnchor}`);
-        map.setView(districtCenter, 10);
+        centerPoint(districtCenter, 12);
       } else {
         const routed = features.filter((feature) => feature.route).flatMap((feature) => feature.route!);
         if (routed.length) {
-          map.fitBounds(L.latLngBounds(routed), { padding: [50, 50], maxZoom: 10 });
+          map.fitBounds(L.latLngBounds(routed), fitOpts(11));
         } else {
           map.setView(districtCenter, 9);
         }
@@ -812,13 +821,6 @@ export function RoadWatch() {
               placeholder={t.chooseDistrict}
             />
           </div>
-          <div className="language-toggle" role="group" aria-label={t.languageLabel}>
-            <button type="button" className={langChoice === "en" ? "active" : ""} aria-pressed={langChoice === "en"} aria-label={t.english} onClick={() => changeLanguage("en")}>EN</button>
-            <button type="button" className={langChoice === "hi" ? "active" : ""} aria-pressed={langChoice === "hi"} aria-label={t.hindi} onClick={() => changeLanguage("hi")}>हिं</button>
-            {regionalAvailable && regionalCode && (
-              <button type="button" className={langChoice === "regional" ? "active" : ""} aria-pressed={langChoice === "regional"} aria-label={languageAutonyms[regionalCode] ?? regionalCode} onClick={() => changeLanguage("regional")}>{(languageAutonyms[regionalCode] ?? regionalCode).slice(0, 3)}</button>
-            )}
-          </div>
         </div>
       </header>
 
@@ -833,6 +835,16 @@ export function RoadWatch() {
             <a className="drawer-link drawer-cta" href={`${PUBLIC_BASE_PATH}/due-diligence`}>{language === "hi" ? "प्लॉट सत्यापित करें" : "Verify a plot"}</a>
             <a className="drawer-link" href={`${PUBLIC_BASE_PATH}/auctions`}>{language === "hi" ? "बैंक नीलामी" : "Bank auctions"}</a>
             <a className="drawer-link" href={`${PUBLIC_BASE_PATH}/`}>{language === "hi" ? "सड़क मानचित्र" : "Road map"}</a>
+            <div className="drawer-lang">
+              <span className="drawer-lang-label">{t.languageLabel}</span>
+              <div className="language-toggle" role="group" aria-label={t.languageLabel}>
+                <button type="button" className={langChoice === "en" ? "active" : ""} aria-pressed={langChoice === "en"} onClick={() => changeLanguage("en")}>EN</button>
+                <button type="button" className={langChoice === "hi" ? "active" : ""} aria-pressed={langChoice === "hi"} onClick={() => changeLanguage("hi")}>हिंदी</button>
+                {regionalAvailable && regionalCode && (
+                  <button type="button" className={langChoice === "regional" ? "active" : ""} aria-pressed={langChoice === "regional"} onClick={() => changeLanguage("regional")}>{languageAutonyms[regionalCode] ?? regionalCode}</button>
+                )}
+              </div>
+            </div>
           </nav>
         </div>
       )}

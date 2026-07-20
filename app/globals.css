@@ -557,3 +557,10 @@ main.app .map-layers { top: 96px; bottom: auto; }
 }
 .drawer-link:hover { background: #f1efe7; }
 .drawer-cta { background: var(--green-deep); color: #f9f6ed; }
+
+/* Language section inside the drawer */
+.drawer-lang { margin-top: auto; padding: 14px 8px 4px; border-top: 1px solid var(--line); }
+.drawer-lang-label { display: block; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.drawer-lang .language-toggle { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: #fff; }
+.drawer-lang .language-toggle button { min-width: 40px; height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer; }
+.drawer-lang .language-toggle button.active { background: var(--green-deep); color: #f9f6ed; }
