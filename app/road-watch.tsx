@@ -803,32 +803,28 @@ export function RoadWatch() {
 
       <aside className="app-sheet" aria-label={t.roadDataView}>
         <div className="sheet-grip" aria-hidden="true" />
-        <div className="sheet-selects">
-          <CompactSelect
-            label={t.chooseState}
-            value={stateId}
-            onChange={(v) => changeState(Number(v))}
-            options={states.map((item) => ({ value: item.id, label: translateState(item.name, nameLanguage, geoNames) }))}
-          />
-          <CompactSelect
-            label={t.chooseDistrict}
-            value={districtCode}
-            onChange={(v) => { setDistrictCode(Number(v)); setSelectedId(null); }}
-            options={districts.map((item) => ({ value: item.code, label: translateDistrict(item.name, nameLanguage, geoNames) }))}
-          />
-        </div>
-        <div className="filter-panel">
-          <label className="search-field">
-            <span>{t.search}</span>
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t.inventoryPlaceholder} />
+        <div className="sheet-chips">
+          <label className="chip">
+            <span className="chip-k">{language === "hi" ? "राज्य" : "State"}</span>
+            <select value={stateId} onChange={(e) => changeState(Number(e.target.value))} aria-label={t.chooseState}>
+              {states.map((item) => <option key={item.id} value={item.id}>{translateState(item.name, nameLanguage, geoNames)}</option>)}
+            </select>
+            <span className="chip-caret" aria-hidden="true">▾</span>
           </label>
-          <label className="select-field">
-            <span>{t.roadType}</span>
-            <select value={roadType} onChange={(event) => setRoadType(event.target.value)}>
+          <label className="chip">
+            <span className="chip-k">{language === "hi" ? "ज़िला" : "District"}</span>
+            <select value={districtCode} onChange={(e) => { setDistrictCode(Number(e.target.value)); setSelectedId(null); }} aria-label={t.chooseDistrict}>
+              {districts.map((item) => <option key={item.code} value={item.code}>{translateDistrict(item.name, nameLanguage, geoNames)}</option>)}
+            </select>
+            <span className="chip-caret" aria-hidden="true">▾</span>
+          </label>
+          <label className="chip">
+            <span className="chip-k">{language === "hi" ? "प्रकार" : "Type"}</span>
+            <select value={roadType} onChange={(e) => setRoadType(e.target.value)} aria-label={t.roadType}>
               {inventoryTypes.map((item) => <option key={item} value={item}>{translateRoadType(item, language)}</option>)}
             </select>
+            <span className="chip-caret" aria-hidden="true">▾</span>
           </label>
-          {hasFilters && <button type="button" className="clear-button" onClick={clearFilters}>{t.clear}</button>}
         </div>
         <div className="result-count">
           <span>{loading ? t.loadingDistrictData : `${formatNumber(modeCount)} ${t.roadRecords}`}</span>

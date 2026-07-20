@@ -496,3 +496,29 @@ main.app .map-layers { top: auto; bottom: calc(46dvh + 12px); left: 12px; }
 .app-sheet .search-field input::placeholder { color: #8a938c; }
 .app-sheet .result-count { padding: 2px 0 8px; border-bottom: 1px solid var(--line); }
 .app-sheet .clear-button { color: var(--ink); }
+
+/* Sheet controls: single row of 3 compact chips (tap to open native options) */
+.sheet-chips { display: flex; gap: 6px; flex: 0 0 auto; margin: 2px 0 8px; }
+.chip {
+  flex: 1 1 0; min-width: 0; position: relative;
+  display: flex; flex-direction: column; justify-content: center;
+  border: 1px solid var(--line); border-radius: 999px; background: #fff;
+  padding: 4px 22px 4px 12px; height: 40px; cursor: pointer;
+}
+.chip-k { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); line-height: 1.1; }
+.chip select {
+  appearance: none; -webkit-appearance: none; border: 0; outline: 0; background: transparent;
+  width: 100%; padding: 0; margin: 0; font-size: 13px; font-weight: 600; color: var(--ink);
+  font-family: inherit; cursor: pointer; text-overflow: ellipsis; line-height: 1.2;
+}
+.chip-caret { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--muted); font-size: 11px; }
+
+/* Make the sheet taller and the road list fully scrollable */
+.app-sheet { height: 54dvh; }
+.app-sheet .result-count { padding: 2px 0 6px; border-bottom: 1px solid var(--line); }
+.app-sheet .project-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 20px; }
+main.app .map-layers { bottom: calc(54dvh + 12px); }
+
+@media (min-width: 861px) {
+  .app-sheet { height: auto; }
+}
