@@ -351,7 +351,11 @@ function RoadMap({
           fillOpacity: 0.95,
         }).addTo(layer);
         marker.bindTooltip(pin.label, { direction: "top" });
-        marker.on("click", () => window.open(pin.url, "_blank", "noopener"));
+        marker.bindPopup(
+          `<div style="font:13px/1.4 var(--font-sans,sans-serif);color:#17251f"><strong>${pin.label}</strong><br/>` +
+          `<a href="${pin.url}" target="_blank" rel="noopener" style="color:#214f42;font-weight:600">${language === "hi" ? "आधिकारिक सूचना" : "Official notice"} ↗</a></div>`,
+          { closeButton: true },
+        );
       });
     });
     return () => {
@@ -360,7 +364,10 @@ function RoadMap({
   }, [districtCenter, features, language, mode, onSelect, selectedFeature, auctions]);
 
   function resetToIndia() {
-    mapRef.current?.fitBounds([[6.5, 68.0], [37.5, 97.5]], { padding: [10, 10] });
+    const mobile = typeof window !== "undefined" && window.innerWidth < 861;
+    const padTL: [number, number] = mobile ? [12, 100] : [400, 16];
+    const padBR: [number, number] = mobile ? [12, Math.round((typeof window !== "undefined" ? window.innerHeight : 700) * 0.5)] : [16, 16];
+    mapRef.current?.fitBounds([[5.5, 66.0], [36.5, 98.5]], { paddingTopLeft: padTL, paddingBottomRight: padBR });
   }
 
   return (
