@@ -484,3 +484,15 @@ main.app .map-layers { top: auto; bottom: calc(46dvh + 12px); left: 12px; }
   }
   main.app .map-layers { bottom: auto; top: 16px; left: 412px; }
 }
+
+/* Sheet: fix filter fields for the light background + tighten rhythm */
+.app-sheet .filter-panel { margin: 6px 0 4px; border: 0; }
+.sheet-selects { margin-bottom: 2px; }
+.app-sheet .search-field, .app-sheet .select-field { gap: 3px; }
+.app-sheet .search-field > span, .app-sheet .select-field > span { color: var(--muted); }
+.app-sheet .search-field input, .app-sheet .select-field select {
+  height: 40px; background: #fff; color: var(--ink); border: 1px solid var(--line); color-scheme: light;
+}
+.app-sheet .search-field input::placeholder { color: #8a938c; }
+.app-sheet .result-count { padding: 2px 0 8px; border-bottom: 1px solid var(--line); }
+.app-sheet .clear-button { color: var(--ink); }
