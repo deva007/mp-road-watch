@@ -564,3 +564,16 @@ main.app .map-layers { top: 96px; bottom: auto; }
 .drawer-lang .language-toggle { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: #fff; }
 .drawer-lang .language-toggle button { min-width: 40px; height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer; }
 .drawer-lang .language-toggle button.active { background: var(--green-deep); color: #f9f6ed; }
+
+/* Map wrapper + reset-to-India button */
+.map-wrap { position: relative; width: 100%; height: 100%; }
+.map-reset {
+  position: absolute; z-index: 500; top: 96px; right: 12px;
+  width: 42px; height: 42px; border-radius: 11px;
+  border: 1px solid var(--line); background: #fff; color: var(--ink);
+  font-size: 18px; line-height: 1; cursor: pointer; box-shadow: 0 2px 12px rgba(29,42,36,.16);
+}
+.map-reset:hover { background: #f4f0e7; }
+@media (min-width: 861px) {
+  .map-reset { top: 16px; right: 16px; }
+}

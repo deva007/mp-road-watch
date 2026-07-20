@@ -359,7 +359,16 @@ function RoadMap({
     };
   }, [districtCenter, features, language, mode, onSelect, selectedFeature, auctions]);
 
-  return <div ref={containerRef} className="map-canvas" aria-label={translations[language].mapLabel} />;
+  function resetToIndia() {
+    mapRef.current?.fitBounds([[6.5, 68.0], [37.5, 97.5]], { padding: [10, 10] });
+  }
+
+  return (
+    <div className="map-wrap">
+      <div ref={containerRef} className="map-canvas" aria-label={translations[language].mapLabel} />
+      <button type="button" className="map-reset" onClick={resetToIndia} aria-label={language === "hi" ? "पूरा भारत देखें" : "Reset to India"}>⤢</button>
+    </div>
+  );
 }
 
 type ComboItem = { kind: "state" | "district"; id: number; stateId: number; label: string; sub: string };
@@ -519,8 +528,7 @@ export function RoadWatch() {
   const [roadType, setRoadType] = useState("All road types");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showAuctions, setShowAuctions] = useState(false);
-  const [stateAuctions, setStateAuctions] = useState<AuctionPin[]>([]);
+  const [allAuctions, setAllAuctions] = useState<AuctionPin[]>([]);
   const [sheetPx, setSheetPx] = useState<number | null>(null);
   const sheetRef = useRef<HTMLElement>(null);
   const dragRef = useRef<{ startY: number; startH: number } | null>(null);
@@ -638,13 +646,22 @@ export function RoadWatch() {
   }, [stateId, districtCode, refreshTick]);
 
   useEffect(() => {
-    if (!showAuctions) return;
     let cancelled = false;
-    fetch(`${PUBLIC_BASE_PATH}/data/auctions/${stateId}/listings.json`, { cache: "no-cache" })
-      .then((r) => (r.ok ? (r.json() as Promise<Array<{ id: string; lat: number | null; lng: number | null; title: string; reservePrice: number; noticeUrl: string }>>) : Promise.reject(new Error("none"))))
-      .then((rows) => {
+    type Row = { id: string; lat: number | null; lng: number | null; title: string; reservePrice: number; noticeUrl: string };
+    fetch(`${PUBLIC_BASE_PATH}/data/auctions/index.json`, { cache: "no-cache" })
+      .then((r) => (r.ok ? (r.json() as Promise<{ states: { id: number }[] }>) : Promise.reject(new Error("none"))))
+      .then((idx) =>
+        Promise.all(
+          idx.states.map((st) =>
+            fetch(`${PUBLIC_BASE_PATH}/data/auctions/${st.id}/listings.json`, { cache: "no-cache" })
+              .then((r) => (r.ok ? (r.json() as Promise<Row[]>) : []))
+              .catch(() => [] as Row[]),
+          ),
+        ),
+      )
+      .then((lists) => {
         if (cancelled) return;
-        const pins: AuctionPin[] = rows
+        const pins: AuctionPin[] = (lists.flat() as Row[])
           .filter((r) => r.lat != null && r.lng != null)
           .map((r) => ({
             id: r.id,
@@ -653,11 +670,11 @@ export function RoadWatch() {
             label: `${r.title} · ₹${(r.reservePrice / 100000).toFixed(1)}L`,
             url: r.noticeUrl,
           }));
-        setStateAuctions(pins);
+        setAllAuctions(pins);
       })
-      .catch(() => { if (!cancelled) setStateAuctions([]); });
+      .catch(() => {});
     return () => { cancelled = true; };
-  }, [showAuctions, stateId]);
+  }, []);
 
   const districtSummary = districts.find((item) => item.code === districtCode);
   const currentDataset = dataset?.district.code === districtCode ? dataset : null;
@@ -792,18 +809,8 @@ export function RoadWatch() {
           mode={mode}
           language={language}
           onSelect={setSelectedId}
-          auctions={showAuctions ? stateAuctions : []}
+          auctions={allAuctions}
         />
-        <div className="map-layers">
-          <button
-            type="button"
-            className={showAuctions ? "layer-chip active" : "layer-chip"}
-            aria-pressed={showAuctions}
-            onClick={() => setShowAuctions((v) => !v)}
-          >
-            <i /> {language === "hi" ? "बैंक नीलामी" : "Bank auctions"}{showAuctions && stateAuctions.length ? ` · ${stateAuctions.length}` : ""}
-          </button>
-        </div>
       </div>
 
       <header className="app-top" id="top">
