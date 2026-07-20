@@ -534,3 +534,26 @@ main.app .map-layers { top: 96px; bottom: auto; }
   .sheet-grip-zone { display: none; }
   main.app .map-layers { top: 16px; bottom: auto; }
 }
+
+/* Top-left nav drawer replaces the Verify/Auctions chips */
+.nav-btn {
+  flex: 0 0 auto; width: 44px; height: 44px; border-radius: 12px;
+  border: 1px solid var(--line); background: #fff; color: var(--ink);
+  font-size: 19px; line-height: 1; cursor: pointer; box-shadow: 0 2px 12px rgba(29,42,36,.12);
+}
+.drawer-backdrop { position: fixed; inset: 0; z-index: 1200; background: rgba(15,25,20,.42); }
+.drawer {
+  position: fixed; top: 0; left: 0; height: 100%; width: min(78%, 300px);
+  background: #fff; z-index: 1201; padding: 16px 14px; display: flex; flex-direction: column; gap: 6px;
+  box-shadow: 6px 0 28px rgba(29,42,36,.22); animation: drawer-in .2s ease both;
+}
+@keyframes drawer-in { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+.drawer-head { display: flex; align-items: center; gap: 10px; padding: 4px 4px 14px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.drawer-head strong { flex: 1; font-size: 15px; }
+.drawer-close { border: 0; background: transparent; font-size: 16px; color: var(--muted); cursor: pointer; }
+.drawer-link {
+  display: block; padding: 13px 12px; border-radius: 10px; text-decoration: none;
+  color: var(--ink); font-size: 15px; font-weight: 600;
+}
+.drawer-link:hover { background: #f1efe7; }
+.drawer-cta { background: var(--green-deep); color: #f9f6ed; }

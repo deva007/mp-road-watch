@@ -515,6 +515,7 @@ export function RoadWatch() {
   const [sheetPx, setSheetPx] = useState<number | null>(null);
   const sheetRef = useRef<HTMLElement>(null);
   const dragRef = useRef<{ startY: number; startH: number } | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
   const [dataCheckedAt, setDataCheckedAt] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
@@ -708,7 +709,7 @@ export function RoadWatch() {
 
   function snapSheet(px: number) {
     const vh = window.innerHeight;
-    const snaps = [vh * 0.20, vh * 0.54, vh * 0.90];
+    const snaps = [vh * 0.18, vh * 0.44, vh * 0.66];
     return snaps.reduce((a, b) => (Math.abs(b - px) < Math.abs(a - px) ? b : a));
   }
   function onGripDown(e: React.PointerEvent) {
@@ -720,7 +721,7 @@ export function RoadWatch() {
   function onGripMove(e: React.PointerEvent) {
     if (!dragRef.current) return;
     const dy = dragRef.current.startY - e.clientY;
-    const h = Math.max(120, Math.min(window.innerHeight * 0.92, dragRef.current.startH + dy));
+    const h = Math.max(120, Math.min(window.innerHeight * 0.66, dragRef.current.startH + dy));
     setSheetPx(h);
   }
   function onGripUp() {
@@ -798,9 +799,7 @@ export function RoadWatch() {
 
       <header className="app-top" id="top">
         <div className="app-top-row">
-          <a className="brand" href={`${PUBLIC_BASE_PATH}/`} aria-label={t.homeLabel}>
-            <span className="brand-mark" aria-hidden="true"><i /><i /></span>
-          </a>
+          <button type="button" className="nav-btn" aria-label={language === "hi" ? "मेनू" : "Menu"} onClick={() => setDrawerOpen(true)}>☰</button>
           <div className="app-search">
             <SearchCombobox
               allDistricts={allDistricts}
@@ -821,11 +820,22 @@ export function RoadWatch() {
             )}
           </div>
         </div>
-        <div className="app-top-links">
-          <a className="app-chip app-chip-cta" href={`${PUBLIC_BASE_PATH}/due-diligence`}>{language === "hi" ? "प्लॉट सत्यापित करें" : "Verify a plot"}</a>
-          <a className="app-chip" href={`${PUBLIC_BASE_PATH}/auctions`}>{language === "hi" ? "बैंक नीलामी" : "Bank auctions"}</a>
-        </div>
       </header>
+
+      {drawerOpen && (
+        <div className="drawer-backdrop" onClick={() => setDrawerOpen(false)}>
+          <nav className="drawer" onClick={(e) => e.stopPropagation()} aria-label="Menu">
+            <div className="drawer-head">
+              <span className="brand-mark" aria-hidden="true"><i /><i /></span>
+              <strong>MP Road Watch</strong>
+              <button type="button" className="drawer-close" aria-label={language === "hi" ? "बंद करें" : "Close"} onClick={() => setDrawerOpen(false)}>✕</button>
+            </div>
+            <a className="drawer-link drawer-cta" href={`${PUBLIC_BASE_PATH}/due-diligence`}>{language === "hi" ? "प्लॉट सत्यापित करें" : "Verify a plot"}</a>
+            <a className="drawer-link" href={`${PUBLIC_BASE_PATH}/auctions`}>{language === "hi" ? "बैंक नीलामी" : "Bank auctions"}</a>
+            <a className="drawer-link" href={`${PUBLIC_BASE_PATH}/`}>{language === "hi" ? "सड़क मानचित्र" : "Road map"}</a>
+          </nav>
+        </div>
+      )}
 
       <aside className="app-sheet" aria-label={t.roadDataView} ref={sheetRef} style={sheetPx ? { height: `${sheetPx}px` } : undefined}>
         <div
