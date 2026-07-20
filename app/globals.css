@@ -522,3 +522,15 @@ main.app .map-layers { bottom: calc(54dvh + 12px); }
 @media (min-width: 861px) {
   .app-sheet { height: auto; }
 }
+
+/* Draggable sheet grip zone */
+.sheet-grip-zone { flex: 0 0 auto; padding: 6px 0 4px; cursor: grab; touch-action: none; }
+.sheet-grip-zone:active { cursor: grabbing; }
+.sheet-grip { width: 44px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto; }
+.app-sheet { transition: height .18s ease; }
+main.app .map-layers { top: 96px; bottom: auto; }
+@media (min-width: 861px) {
+  .app-sheet { transition: none; }
+  .sheet-grip-zone { display: none; }
+  main.app .map-layers { top: 16px; bottom: auto; }
+}

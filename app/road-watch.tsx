@@ -512,6 +512,9 @@ export function RoadWatch() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showAuctions, setShowAuctions] = useState(false);
   const [stateAuctions, setStateAuctions] = useState<AuctionPin[]>([]);
+  const [sheetPx, setSheetPx] = useState<number | null>(null);
+  const sheetRef = useRef<HTMLElement>(null);
+  const dragRef = useRef<{ startY: number; startH: number } | null>(null);
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
   const [dataCheckedAt, setDataCheckedAt] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
@@ -703,6 +706,29 @@ export function RoadWatch() {
       : new Intl.DateTimeFormat(language === "hi" ? "hi-IN" : "en-IN", { day: "numeric", month: "short", year: "numeric" }).format(checkedDate)
     : null;
 
+  function snapSheet(px: number) {
+    const vh = window.innerHeight;
+    const snaps = [vh * 0.20, vh * 0.54, vh * 0.90];
+    return snaps.reduce((a, b) => (Math.abs(b - px) < Math.abs(a - px) ? b : a));
+  }
+  function onGripDown(e: React.PointerEvent) {
+    if (window.innerWidth >= 861) return;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    const h = sheetRef.current?.getBoundingClientRect().height ?? window.innerHeight * 0.54;
+    dragRef.current = { startY: e.clientY, startH: h };
+  }
+  function onGripMove(e: React.PointerEvent) {
+    if (!dragRef.current) return;
+    const dy = dragRef.current.startY - e.clientY;
+    const h = Math.max(120, Math.min(window.innerHeight * 0.92, dragRef.current.startH + dy));
+    setSheetPx(h);
+  }
+  function onGripUp() {
+    if (!dragRef.current) return;
+    dragRef.current = null;
+    setSheetPx((cur) => snapSheet(cur ?? window.innerHeight * 0.54));
+  }
+
   function changeState(nextStateId: number) {
     setStateId(nextStateId);
     setSelectedId(null);
@@ -801,8 +827,18 @@ export function RoadWatch() {
         </div>
       </header>
 
-      <aside className="app-sheet" aria-label={t.roadDataView}>
-        <div className="sheet-grip" aria-hidden="true" />
+      <aside className="app-sheet" aria-label={t.roadDataView} ref={sheetRef} style={sheetPx ? { height: `${sheetPx}px` } : undefined}>
+        <div
+          className="sheet-grip-zone"
+          onPointerDown={onGripDown}
+          onPointerMove={onGripMove}
+          onPointerUp={onGripUp}
+          onPointerCancel={onGripUp}
+          role="separator"
+          aria-label={language === "hi" ? "सूची खींचें" : "Drag list"}
+        >
+          <div className="sheet-grip" aria-hidden="true" />
+        </div>
         <div className="sheet-chips">
           <label className="chip">
             <span className="chip-k">{language === "hi" ? "राज्य" : "State"}</span>
