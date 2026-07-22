@@ -7,7 +7,6 @@ import {
   translateDistrict,
   translatePrecision,
   translateRoadType,
-  translateStage,
   translateState,
   translations,
   type Language,
@@ -110,14 +109,6 @@ const DEFAULT_STATE_NAME = "Madhya Pradesh";
 const DEFAULT_DISTRICT = 76;
 const PAGE_SIZE = 100;
 const PUBLIC_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-const projectStages: (ProjectStage | "All stages")[] = [
-  "All stages",
-  "In progress",
-  "Pending / not started",
-  "Approved",
-  "Bids / appraisal",
-  "DPR / proposed",
-];
 const inventoryTypes = [
   "All road types",
   "National highway",
@@ -127,13 +118,6 @@ const inventoryTypes = [
   "Village road",
   "Rural track",
   "Other road",
-];
-const projectTypes = [
-  "All road types",
-  "National highway",
-  "State highway",
-  "Expressway / bypass",
-  "Village / rural project",
 ];
 const stageColors: Record<ProjectStage, string> = {
   "In progress": "#297864",
@@ -382,32 +366,6 @@ type ComboItem = { kind: "state" | "district"; id: number; stateId: number; labe
 
 type GlobalDistrict = { code: number; name: string; stateId: number; stateName: string };
 
-function CompactSelect({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: number | string;
-  onChange: (value: string) => void;
-  options: { value: number | string; label: string }[];
-}) {
-  return (
-    <label className="cselect">
-      <span className="cselect-label">{label}</span>
-      <span className="cselect-shell">
-        <select className="cselect-input" value={value} onChange={(e) => onChange(e.target.value)}>
-          {options.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-        <span className="cselect-caret" aria-hidden="true">▾</span>
-      </span>
-    </label>
-  );
-}
-
 function SearchCombobox({
   allDistricts,
   states,
@@ -530,7 +488,7 @@ export function RoadWatch() {
   const [districts, setDistricts] = useState<DistrictSummary[]>([]);
   const [districtCode, setDistrictCode] = useState(DEFAULT_DISTRICT);
   const [dataset, setDataset] = useState<DistrictDataset | null>(null);
-  const [mode, setMode] = useState<"projects" | "inventory">("inventory");
+  const [mode] = useState<"projects" | "inventory">("inventory");
   const [stage, setStage] = useState<ProjectStage | "All stages">("All stages");
   const [roadType, setRoadType] = useState("All road types");
   const [search, setSearch] = useState("");
@@ -541,7 +499,6 @@ export function RoadWatch() {
   const dragRef = useRef<{ startY: number; startH: number } | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
-  const [dataCheckedAt, setDataCheckedAt] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
   const lastLoadedDistrict = useRef<string | null>(null);
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
@@ -585,13 +542,6 @@ export function RoadWatch() {
     }, 60_000);
     return () => window.clearInterval(id);
   }, []);
-
-  useEffect(() => {
-    fetch(`${PUBLIC_BASE_PATH}/data/roads/meta.json`, { cache: "no-cache" })
-      .then((response) => response.ok ? (response.json() as Promise<{ dataCheckedAt: string }>) : null)
-      .then((meta) => { if (meta?.dataCheckedAt) setDataCheckedAt(meta.dataCheckedAt); })
-      .catch(() => {});
-  }, [refreshTick]);
 
   useEffect(() => {
     fetch(`${PUBLIC_BASE_PATH}/data/roads/states.json`, { cache: "no-cache" })
@@ -731,14 +681,7 @@ export function RoadWatch() {
   const activeSelectedId = mode === "projects" ? selectedProject?.id : selectedRoad?.id;
   const districtCenter = currentDataset?.district.center ?? districtSummary?.center ?? [23.2599, 77.4126];
   const modeCount = mode === "projects" ? filteredProjects.length : filteredInventory.length;
-  const hasFilters = stage !== "All stages" || roadType !== "All road types" || search.length > 0;
   const loading = !currentDataset;
-  const checkedDate = dataCheckedAt ? new Date(dataCheckedAt) : null;
-  const checkedLabel = checkedDate && !Number.isNaN(checkedDate.getTime())
-    ? checkedDate.toDateString() === new Date().toDateString()
-      ? t.today
-      : new Intl.DateTimeFormat(language === "hi" ? "hi-IN" : "en-IN", { day: "numeric", month: "short", year: "numeric" }).format(checkedDate)
-    : null;
 
   function snapSheet(px: number) {
     const vh = window.innerHeight;
@@ -778,15 +721,6 @@ export function RoadWatch() {
       setSelectedId(null);
       setVisibleLimit(PAGE_SIZE);
     }
-  }
-
-  function changeMode(nextMode: "projects" | "inventory") {
-    setMode(nextMode);
-    setRoadType("All road types");
-    setStage("All stages");
-    setSearch("");
-    setSelectedId(null);
-    setVisibleLimit(PAGE_SIZE);
   }
 
   function clearFilters() {
@@ -847,7 +781,6 @@ export function RoadWatch() {
               <button type="button" className="drawer-close" aria-label={language === "hi" ? "बंद करें" : "Close"} onClick={() => setDrawerOpen(false)}>✕</button>
             </div>
             <a className="drawer-link drawer-cta" href={`${PUBLIC_BASE_PATH}/due-diligence`}>{language === "hi" ? "प्लॉट सत्यापित करें" : "Verify a plot"}</a>
-            <a className="drawer-link" href={`${PUBLIC_BASE_PATH}/auctions`}>{language === "hi" ? "बैंक नीलामी" : "Bank auctions"}</a>
             <a className="drawer-link" href={`${PUBLIC_BASE_PATH}/`}>{language === "hi" ? "सड़क मानचित्र" : "Road map"}</a>
             <div className="drawer-lang">
               <span className="drawer-lang-label">{t.languageLabel}</span>
