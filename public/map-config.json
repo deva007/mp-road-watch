@@ -1,0 +1,6 @@
+{
+  "tileUrl": "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+  "attribution": "&copy; OpenStreetMap contributors &copy; CARTO",
+  "maxZoom": 19,
+  "_note": "To use correct-India Mappls tiles, replace tileUrl with: https://apis.mappls.com/advancedmaps/v1/YOUR_KEY/still_map/{z}/{x}/{y}.png and attribution with '© Mappls (MapmyIndia)'. Mappls keys are domain-restricted and safe client-side."
+}

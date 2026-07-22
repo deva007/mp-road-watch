@@ -228,10 +228,18 @@ function RoadMap({
         attributionControl: true,
       });
       L.control.zoom({ position: "bottomright" }).addTo(map);
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-        attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
-        maxZoom: 19,
-      }).addTo(map);
+      // Basemap is driven by public/map-config.json so the tiles can be swapped
+      // to Mappls (correct India borders) by editing that file — no code change.
+      fetch(`${PUBLIC_BASE_PATH}/map-config.json`, { cache: "force-cache" })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null)
+        .then((cfg: { tileUrl?: string; attribution?: string; maxZoom?: number } | null) => {
+          if (cancelled) return;
+          L.tileLayer(cfg?.tileUrl ?? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+            attribution: cfg?.attribution ?? "&copy; OpenStreetMap contributors &copy; CARTO",
+            maxZoom: cfg?.maxZoom ?? 19,
+          }).addTo(map);
+        });
       mapRef.current = map;
       window.setTimeout(() => map.invalidateSize(), 0);
     });
